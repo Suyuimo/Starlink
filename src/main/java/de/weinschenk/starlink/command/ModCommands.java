@@ -1,13 +1,11 @@
 package de.weinschenk.starlink.command;
 
 import com.mojang.brigadier.CommandDispatcher;
-import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import de.weinschenk.starlink.Starlink;
 import de.weinschenk.starlink.block.LaunchControllerBlockEntity;
 import de.weinschenk.starlink.data.SatelliteRegistry;
 import de.weinschenk.starlink.dimension.ModDimensions;
-import de.weinschenk.starlink.dimension.OrbitRoutes;
 import de.weinschenk.starlink.entity.ModEntities;
 import de.weinschenk.starlink.entity.SatelliteEntity;
 import net.minecraft.commands.CommandSourceStack;
@@ -47,25 +45,16 @@ public class ModCommands {
                         .requires(src -> src.hasPermission(2))
                         .then(Commands.argument("count", IntegerArgumentType.integer(1, 2000))
                             .executes(ctx -> spawnSatellites(ctx.getSource(),
-                                    IntegerArgumentType.getInteger(ctx, "count"), true, 0))
-                            .then(Commands.argument("axisX", BoolArgumentType.bool())
+                                    IntegerArgumentType.getInteger(ctx, "count"), 0))
+                            .then(Commands.argument("offset", IntegerArgumentType.integer(0))
                                 .executes(ctx -> spawnSatellites(ctx.getSource(),
                                         IntegerArgumentType.getInteger(ctx, "count"),
-                                        BoolArgumentType.getBool(ctx, "axisX"), 0))
-                                .then(Commands.argument("offset", IntegerArgumentType.integer(0))
-                                    .executes(ctx -> spawnSatellites(ctx.getSource(),
-                                            IntegerArgumentType.getInteger(ctx, "count"),
-                                            BoolArgumentType.getBool(ctx, "axisX"),
-                                            IntegerArgumentType.getInteger(ctx, "offset")))))))
+                                        IntegerArgumentType.getInteger(ctx, "offset"))))))
                     .then(Commands.literal("fill")
                         .requires(src -> src.hasPermission(2))
                         .then(Commands.argument("count", IntegerArgumentType.integer(1, 2000))
                             .executes(ctx -> fillOrbit(ctx.getSource(),
-                                    IntegerArgumentType.getInteger(ctx, "count"), true))
-                            .then(Commands.argument("axisX", BoolArgumentType.bool())
-                                .executes(ctx -> fillOrbit(ctx.getSource(),
-                                        IntegerArgumentType.getInteger(ctx, "count"),
-                                        BoolArgumentType.getBool(ctx, "axisX")))))))
+                                    IntegerArgumentType.getInteger(ctx, "count"))))))
                 .then(Commands.literal("controller")
                     .then(Commands.literal("reset")
                         .requires(src -> src.hasPermission(2))
@@ -73,7 +62,7 @@ public class ModCommands {
         );
     }
 
-    /** Teleportiert den Spieler in die Orbit-Dimension (gleiche X/Z, Y=120). */
+    /** Teleportiert den Spieler an den entsprechenden Punkt auf dem Orbit-Ring (gleicher Winkel, Radius 10.000). */
     private static int teleportToOrbit(CommandSourceStack source) {
         ServerPlayer player;
         try {
@@ -89,10 +78,15 @@ public class ModCommands {
             return 0;
         }
 
+        // Winkel aus der aktuellen Spielerposition berechnen
+        double angle = Math.atan2(player.getZ(), player.getX());
+        double orbitX = SatelliteEntity.ORBIT_RADIUS * Math.cos(angle);
+        double orbitZ = SatelliteEntity.ORBIT_RADIUS * Math.sin(angle);
+
         player.teleportTo(orbitLevel,
-                player.getX(),
+                orbitX,
                 SatelliteEntity.ORBIT_HEIGHT + 20,
-                player.getZ(),
+                orbitZ,
                 player.getYRot(),
                 player.getXRot());
 
@@ -100,14 +94,15 @@ public class ModCommands {
         return 1;
     }
 
+    /** Abstand in Blöcken zwischen zwei aufeinanderfolgenden Spawn-Satelliten. */
     private static final double SATELLITE_SPACING = 50.0;
 
     /**
-     * Spawnt {@code count} Satelliten direkt in der Orbit-Dimension.
-     * Startposition: X/Z des ausführenden Spielers (oder 0/0 bei Console).
-     * Abstand und Route identisch zu RocketV2Entity.deployToOrbit().
+     * Spawnt {@code count} Satelliten ab dem Winkel der Spielerposition,
+     * jeweils mit {@code SATELLITE_SPACING} Bogenabstand.
+     * {@code offsetBlocks} verschiebt den Startpunkt zusätzlich entlang des Orbits.
      */
-    private static int spawnSatellites(CommandSourceStack source, int count, boolean axisX, int offsetBlocks) {
+    private static int spawnSatellites(CommandSourceStack source, int count, int offsetBlocks) {
         ServerLevel orbitLevel = source.getServer().getLevel(ModDimensions.ORBIT_LEVEL_KEY);
         if (orbitLevel == null) {
             source.sendFailure(Component.literal("Orbit-Dimension nicht gefunden!"));
@@ -115,118 +110,78 @@ public class ModCommands {
         }
 
         Vec3 pos = source.getPosition();
-        double originX = pos.x;
-        double originZ = pos.z;
+        double baseAngle = Math.atan2(pos.z, pos.x)
+                + offsetBlocks / SatelliteEntity.ORBIT_RADIUS;
 
-        double routeZ, routeX;
-        int direction;
-        if (axisX) {
-            routeZ    = OrbitRoutes.snapToNearestRouteZ(originZ);
-            routeX    = originX + offsetBlocks;
-            direction = OrbitRoutes.directionForRouteZ(routeZ);
-        } else {
-            routeX    = OrbitRoutes.snapToNearestRouteX(originX);
-            routeZ    = originZ + offsetBlocks;
-            direction = OrbitRoutes.directionForRouteX(routeX);
+        double angularSpacing = SATELLITE_SPACING / SatelliteEntity.ORBIT_RADIUS;
+
+        SatelliteRegistry registry = SatelliteRegistry.get(source.getServer());
+        long startTick = source.getServer().overworld().getGameTime();
+        int spawned = 0;
+
+        for (int i = 0; i < count; i++) {
+            double angle  = baseAngle + i * angularSpacing;
+            double spawnX = SatelliteEntity.ORBIT_RADIUS * Math.cos(angle);
+            double spawnZ = SatelliteEntity.ORBIT_RADIUS * Math.sin(angle);
+
+            SatelliteEntity satellite = ModEntities.SATELLITE.get().create(orbitLevel);
+            if (satellite != null) {
+                satellite.setAngle(angle);
+                satellite.setPos(spawnX, SatelliteEntity.ORBIT_HEIGHT, spawnZ);
+                orbitLevel.addFreshEntity(satellite);
+                registry.register(satellite.getUUID(), angle, startTick);
+                spawned++;
+            }
         }
 
-        int spawned = doSpawnBatch(orbitLevel, source, count, axisX, routeX, routeZ, direction);
-
         int finalSpawned = spawned;
-        String axis = axisX ? "X" : "Z";
         source.sendSuccess(() -> Component.literal(
-                "§6[Starlink] §a" + finalSpawned + " Satellit(en) gespawnt §7(Achse " + axis
-                + ", Route " + (axisX ? (int) routeZ : (int) routeX)
-                + ", Offset " + offsetBlocks + ", Richtung " + direction + ")"
+                "§6[Starlink] §a" + finalSpawned + " Satellit(en) gespawnt §7(Offset " + offsetBlocks + " Blöcke)"
         ), true);
         return finalSpawned;
     }
 
     /**
-     * Verteilt {@code count} Satelliten gleichmäßig über die gesamte Umlaufbahn (60.000 Blöcke).
-     * Egal wie viele: der Abstand wird automatisch berechnet.
+     * Verteilt {@code count} Satelliten gleichmäßig über den gesamten Orbit-Ring (2π).
      */
-    private static int fillOrbit(CommandSourceStack source, int count, boolean axisX) {
+    private static int fillOrbit(CommandSourceStack source, int count) {
         ServerLevel orbitLevel = source.getServer().getLevel(ModDimensions.ORBIT_LEVEL_KEY);
         if (orbitLevel == null) {
             source.sendFailure(Component.literal("Orbit-Dimension nicht gefunden!"));
             return 0;
         }
 
-        Vec3 pos = source.getPosition();
-        double originX = pos.x;
-        double originZ = pos.z;
-
-        double routeZ, routeX;
-        int direction;
-        if (axisX) {
-            routeZ    = OrbitRoutes.snapToNearestRouteZ(originZ);
-            routeX    = originX;
-            direction = OrbitRoutes.directionForRouteZ(routeZ);
-        } else {
-            routeX    = OrbitRoutes.snapToNearestRouteX(originX);
-            routeZ    = originZ;
-            direction = OrbitRoutes.directionForRouteX(routeX);
-        }
-
-        double orbitLength = SatelliteEntity.HALF_ORBIT * 2.0; // 60.000
-        double spacing = orbitLength / count;
+        double angularSpacing = (2 * Math.PI) / count;
 
         SatelliteRegistry registry = SatelliteRegistry.get(source.getServer());
+        long startTick = source.getServer().overworld().getGameTime();
         int spawned = 0;
+
         for (int i = 0; i < count; i++) {
-            // Gleichmäßig über [-HALF_ORBIT, +HALF_ORBIT] verteilen (nie außerhalb des Wrap-Bereichs)
-            double offset = -SatelliteEntity.HALF_ORBIT + spacing * i;
-            double spawnX = axisX ? routeX + offset : routeX;
-            double spawnZ = axisX ? routeZ           : routeZ + offset;
+            double angle  = i * angularSpacing;
+            double spawnX = SatelliteEntity.ORBIT_RADIUS * Math.cos(angle);
+            double spawnZ = SatelliteEntity.ORBIT_RADIUS * Math.sin(angle);
 
             SatelliteEntity satellite = ModEntities.SATELLITE.get().create(orbitLevel);
             if (satellite != null) {
+                satellite.setAngle(angle);
                 satellite.setPos(spawnX, SatelliteEntity.ORBIT_HEIGHT, spawnZ);
-                satellite.setOrbitDirection(direction);
-                satellite.setAxisX(axisX);
                 orbitLevel.addFreshEntity(satellite);
-                registry.register(satellite.getUUID(), spawnX, spawnZ, source.getServer().overworld().getGameTime(), direction, axisX);
+                registry.register(satellite.getUUID(), angle, startTick);
                 spawned++;
             }
         }
 
         int finalSpawned = spawned;
-        double finalSpacing = spacing;
-        String axis = axisX ? "X" : "Z";
+        int spacingBlocks = (int)(angularSpacing * SatelliteEntity.ORBIT_RADIUS);
         source.sendSuccess(() -> Component.literal(
-                "§6[Starlink] §a" + finalSpawned + " Satellit(en) gleichmäßig verteilt §7(Achse " + axis
-                + ", Abstand " + (int) finalSpacing + " Blöcke)"
+                "§6[Starlink] §a" + finalSpawned + " Satellit(en) gleichmäßig verteilt §7(Abstand ~" + spacingBlocks + " Blöcke)"
         ), true);
         return finalSpawned;
-    }
-
-    private static int doSpawnBatch(ServerLevel orbitLevel, CommandSourceStack source,
-                                    int count, boolean axisX,
-                                    double routeX, double routeZ, int direction) {
-        SatelliteRegistry registry = SatelliteRegistry.get(source.getServer());
-        int spawned = 0;
-        for (int i = 0; i < count; i++) {
-            double spawnX = axisX ? routeX + (SATELLITE_SPACING * i * direction) : routeX;
-            double spawnZ = axisX ? routeZ                                        : routeZ + (SATELLITE_SPACING * i * direction);
-
-            SatelliteEntity satellite = ModEntities.SATELLITE.get().create(orbitLevel);
-            if (satellite != null) {
-                satellite.setPos(spawnX, SatelliteEntity.ORBIT_HEIGHT, spawnZ);
-                satellite.setOrbitDirection(direction);
-                satellite.setAxisX(axisX);
-                orbitLevel.addFreshEntity(satellite);
-                registry.register(satellite.getUUID(), spawnX, spawnZ, source.getServer().overworld().getGameTime(), direction, axisX);
-                spawned++;
-            }
-        }
-        return spawned;
     }
 
     /**
      * Killt alle Satelliten — auch in ungeladenen Chunks.
-     * Phase 1: Chunks force-loaden.
-     * Phase 2: Einen Tick später Entities killen + Chunks wieder freigeben.
      */
     private static int killAllSatellites(CommandSourceStack source) {
         ServerLevel orbitLevel = source.getServer().getLevel(ModDimensions.ORBIT_LEVEL_KEY);
@@ -265,8 +220,7 @@ public class ModCommands {
     }
 
     /**
-     * Setzt das 'launching'-Flag aller LaunchControllerBlockEntities in allen geladenen Dimensionen zurück.
-     * Nützlich wenn eine Rakete ohne ordentliches Ende entfernt wurde (z.B. per /kill @e oder Server-Crash).
+     * Setzt das 'launching'-Flag aller LaunchControllerBlockEntities zurück.
      */
     private static int resetControllers(CommandSourceStack source) {
         int count = 0;

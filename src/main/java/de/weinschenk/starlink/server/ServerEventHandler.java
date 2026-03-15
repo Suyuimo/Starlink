@@ -116,7 +116,6 @@ public class ServerEventHandler {
 
         // Neue Entities für nahe Registry-Einträge spawnen
         SatelliteRegistry registry = SatelliteRegistry.get(server);
-        long currentTick = gameTime;
 
         for (Map.Entry<UUID, SatelliteRegistry.SatEntry> entry : registry.getEntries().entrySet()) {
             UUID id = entry.getKey();
@@ -126,8 +125,8 @@ public class ServerEventHandler {
             if (existing != null && !existing.isRemoved()) continue;
 
             SatelliteRegistry.SatEntry sat = entry.getValue();
-            double cx = sat.currentX(currentTick);
-            double cz = sat.currentZ(currentTick);
+            double cx = sat.currentX(gameTime);
+            double cz = sat.currentZ(gameTime);
 
             boolean nearPlayer = orbitPlayers.stream().anyMatch(p ->
                     Math.abs(cx - p.getX()) <= SPAWN_RADIUS &&
@@ -138,10 +137,9 @@ public class ServerEventHandler {
             SatelliteEntity entity = ModEntities.SATELLITE.get().create(orbitLevel);
             if (entity == null) continue;
 
-            entity.setRegistryUUID(id); // für crash/kill → Registry-Austrag
+            entity.setRegistryUUID(id);
+            entity.setAngle(sat.currentAngle(gameTime));
             entity.setPos(cx, SatelliteEntity.ORBIT_HEIGHT, cz);
-            entity.setOrbitDirection(sat.direction());
-            entity.setAxisX(sat.axisX());
             // Nur in Map eintragen wenn Spawn erfolgreich war (Chunk muss geladen sein)
             if (orbitLevel.addFreshEntity(entity)) {
                 managedEntities.put(id, entity);

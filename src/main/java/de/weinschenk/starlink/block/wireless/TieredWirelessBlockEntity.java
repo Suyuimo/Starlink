@@ -87,7 +87,7 @@ public abstract class TieredWirelessBlockEntity extends BlockEntity {
         if (!(level instanceof ServerLevel serverLevel)) return;
 
         cachedSatCount = SatelliteRegistry.get(serverLevel.getServer())
-                .countNear(pos.getX(), pos.getZ(), SATELLITE_RANGE, serverLevel.getGameTime());
+                .countNear(pos.getX(), pos.getY(), pos.getZ(), serverLevel.getGameTime());
     }
 
     @Override

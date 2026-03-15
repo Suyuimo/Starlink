@@ -2,8 +2,8 @@ package de.weinschenk.starlink.entity;
 
 import com.mojang.logging.LogUtils;
 import de.weinschenk.starlink.block.LaunchControllerV2BlockEntity;
+import de.weinschenk.starlink.data.SatelliteRegistry;
 import de.weinschenk.starlink.dimension.ModDimensions;
-import de.weinschenk.starlink.dimension.OrbitRoutes;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
@@ -25,19 +25,18 @@ public class RocketV2Entity extends Entity {
 
     private static final Logger LOGGER = LogUtils.getLogger();
 
-    private static final double RISE_SPEED      = 0.5;
+    private static final double RISE_SPEED         = 0.5;
     private static final double LAUNCH_THRESHOLD_Y = 319.0;
     private static final int    PARTICLE_INTERVAL  = 2;
 
-    /** Abstand in Blöcken zwischen zwei Satelliten beim Deployment */
+    /** Bogenlängenabstand in Blöcken zwischen zwei Satelliten beim Deployment */
     private static final double SATELLITE_SPACING = 50.0;
 
     private static final EntityDataAccessor<Integer> DATA_PHASE =
             SynchedEntityData.defineId(RocketV2Entity.class, EntityDataSerializers.INT);
 
-    private BlockPos controllerPos   = BlockPos.ZERO;
-    private int      satelliteCount  = 0;
-    private boolean  orbitAxisX      = true;
+    private BlockPos controllerPos       = BlockPos.ZERO;
+    private int      satelliteCount      = 0;
     private UUID     launchingPlayerUuid = null;
 
     public enum Phase { IGNITION, RISING, DEPARTED }
@@ -110,48 +109,36 @@ public class RocketV2Entity extends Entity {
             return;
         }
 
-        // Route bestimmen (gleiche Logik wie RocketEntity)
-        double routeZ, routeX;
-        int    direction;
-        if (orbitAxisX) {
-            routeZ    = OrbitRoutes.snapToNearestRouteZ(getZ());
-            routeX    = getX();
-            direction = OrbitRoutes.directionForRouteZ(routeZ);
-        } else {
-            routeX    = OrbitRoutes.snapToNearestRouteX(getX());
-            routeZ    = getZ();
-            direction = OrbitRoutes.directionForRouteX(routeX);
-        }
+        // Basiswinkel aus der Startposition der Rakete
+        double baseAngle = Math.atan2(getZ(), getX());
+        double angularSpacing = SATELLITE_SPACING / SatelliteEntity.ORBIT_RADIUS;
+        long   startTick = ((ServerLevel) level()).getServer().overworld().getGameTime();
 
-        // Satelliten mit 50-Block-Abstand entlang der Flugachse deployen
+        SatelliteRegistry registry = SatelliteRegistry.get(((ServerLevel) level()).getServer());
+
         int spawned = 0;
         for (int i = 0; i < satelliteCount; i++) {
-            double spawnX = orbitAxisX ? routeX + (SATELLITE_SPACING * i * direction) : routeX;
-            double spawnZ = orbitAxisX ? routeZ                                        : routeZ + (SATELLITE_SPACING * i * direction);
-
-            int chunkX = (int) Math.floor(spawnX / 16.0);
-            int chunkZ = (int) Math.floor(spawnZ / 16.0);
-            orbitLevel.setChunkForced(chunkX, chunkZ, true);
+            double angle  = baseAngle + i * angularSpacing;
+            double spawnX = SatelliteEntity.ORBIT_RADIUS * Math.cos(angle);
+            double spawnZ = SatelliteEntity.ORBIT_RADIUS * Math.sin(angle);
 
             SatelliteEntity satellite = ModEntities.SATELLITE.get().create(orbitLevel);
             if (satellite != null) {
+                satellite.setAngle(angle);
                 satellite.setPos(spawnX, SatelliteEntity.ORBIT_HEIGHT, spawnZ);
-                satellite.setOrbitDirection(direction);
-                satellite.setAxisX(orbitAxisX);
                 orbitLevel.addFreshEntity(satellite);
+                registry.register(satellite.getUUID(), angle, startTick);
                 spawned++;
             }
         }
 
-        LOGGER.info("[Starlink] RocketV2: {} Satelliten deployed. Achse={}, Richtung={}",
-                spawned, orbitAxisX ? "X" : "Z", direction);
-        sendChatToPlayer("§6[Starlink V2] §a" + spawned + " Satelliten deployed! §7(50-Block-Abstand, Achse " + (orbitAxisX ? "X" : "Z") + ")");
+        LOGGER.info("[Starlink] RocketV2: {} Satelliten deployed (50-Block-Abstand auf Orbit-Ring)", spawned);
+        sendChatToPlayer("§6[Starlink V2] §a" + spawned + " Satelliten deployed! §7(Abstand " + (int) SATELLITE_SPACING + " Blöcke)");
 
         finishLaunch();
     }
 
     private void finishLaunch() {
-        // Controller benachrichtigen
         BlockEntity be = level().getBlockEntity(controllerPos);
         if (be instanceof LaunchControllerV2BlockEntity ctrl) {
             ctrl.onRocketDeparted();
@@ -182,10 +169,9 @@ public class RocketV2Entity extends Entity {
         this.entityData.set(DATA_PHASE, phase.ordinal());
     }
 
-    public void setControllerPos(BlockPos pos)       { this.controllerPos = pos; }
-    public void setSatelliteCount(int count)          { this.satelliteCount = count; }
-    public void setOrbitAxisX(boolean axisX)          { this.orbitAxisX = axisX; }
-    public void setLaunchingPlayer(UUID uuid)         { this.launchingPlayerUuid = uuid; }
+    public void setControllerPos(BlockPos pos)   { this.controllerPos = pos; }
+    public void setSatelliteCount(int count)      { this.satelliteCount = count; }
+    public void setLaunchingPlayer(UUID uuid)     { this.launchingPlayerUuid = uuid; }
 
     // -------------------------------------------------------------------------
     // remove() override — Controller immer benachrichtigen
@@ -210,7 +196,6 @@ public class RocketV2Entity extends Entity {
     protected void readAdditionalSaveData(CompoundTag tag) {
         controllerPos  = new BlockPos(tag.getInt("CtrlX"), tag.getInt("CtrlY"), tag.getInt("CtrlZ"));
         satelliteCount = tag.getInt("SatCount");
-        orbitAxisX     = !tag.contains("AxisX") || tag.getBoolean("AxisX");
         setPhase(Phase.values()[tag.getInt("Phase")]);
         if (tag.hasUUID("PlayerUUID")) launchingPlayerUuid = tag.getUUID("PlayerUUID");
     }
@@ -221,7 +206,6 @@ public class RocketV2Entity extends Entity {
         tag.putInt("CtrlY",    controllerPos.getY());
         tag.putInt("CtrlZ",    controllerPos.getZ());
         tag.putInt("SatCount", satelliteCount);
-        tag.putBoolean("AxisX", orbitAxisX);
         tag.putInt("Phase",    getPhase().ordinal());
         if (launchingPlayerUuid != null) tag.putUUID("PlayerUUID", launchingPlayerUuid);
     }

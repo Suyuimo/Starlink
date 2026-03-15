@@ -14,39 +14,40 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 
 import java.util.UUID;
-
 import java.util.List;
 
 public class SatelliteEntity extends Entity {
 
     public static final double ORBIT_HEIGHT = 100.0;
-    public static final double SPEED = 0.5;
+    public static final double SPEED = 10.0;
+    public static final double ORBIT_RADIUS = 10_000.0;
 
-    /** Halber Orbit-Umfang. Satellit fliegt von -HALF_ORBIT bis +HALF_ORBIT, dann Wrap. */
-    public static final double HALF_ORBIT = 30_000.0;
+    /** Winkelgeschwindigkeit in Radiant pro Tick. */
+    public static final double ANGULAR_VELOCITY = SPEED / ORBIT_RADIUS;
 
     private static final double COLLISION_RADIUS = 15.0;
     private static final int    COLLISION_CHECK_INTERVAL = 100;
 
-    private static final EntityDataAccessor<Float>   DATA_HEALTH    =
+    private static final EntityDataAccessor<Float>   DATA_HEALTH =
             SynchedEntityData.defineId(SatelliteEntity.class, EntityDataSerializers.FLOAT);
-    private static final EntityDataAccessor<Boolean> DATA_ACTIVE    =
-            SynchedEntityData.defineId(SatelliteEntity.class, EntityDataSerializers.BOOLEAN);
-    private static final EntityDataAccessor<Integer> DATA_DIRECTION =
-            SynchedEntityData.defineId(SatelliteEntity.class, EntityDataSerializers.INT);
-    /** true = fliegt entlang X-Achse, false = entlang Z-Achse */
-    private static final EntityDataAccessor<Boolean> DATA_AXIS_X    =
+    private static final EntityDataAccessor<Boolean> DATA_ACTIVE =
             SynchedEntityData.defineId(SatelliteEntity.class, EntityDataSerializers.BOOLEAN);
 
     public static final float MAX_HEALTH = 20.0f;
 
     private boolean crashPending = false;
 
+    /** Aktueller Orbit-Winkel in Radiant. */
+    private double angle = 0.0;
+
     /** Registry-UUID dieser Entity (kann von der Entity-UUID abweichen). */
     private UUID registryUUID = null;
 
     public void setRegistryUUID(UUID id) { this.registryUUID = id; }
     public UUID getRegistryUUID()        { return registryUUID != null ? registryUUID : getUUID(); }
+
+    public void   setAngle(double angle) { this.angle = angle; }
+    public double getAngle()             { return angle; }
 
     public SatelliteEntity(EntityType<?> type, Level level) {
         super(type, level);
@@ -55,10 +56,8 @@ public class SatelliteEntity extends Entity {
 
     @Override
     protected void defineSynchedData() {
-        this.entityData.define(DATA_HEALTH,    MAX_HEALTH);
-        this.entityData.define(DATA_ACTIVE,    true);
-        this.entityData.define(DATA_DIRECTION, 1);
-        this.entityData.define(DATA_AXIS_X,    true);
+        this.entityData.define(DATA_HEALTH, MAX_HEALTH);
+        this.entityData.define(DATA_ACTIVE, true);
     }
 
     @Override
@@ -68,18 +67,11 @@ public class SatelliteEntity extends Entity {
 
         ServerLevel serverLevel = (ServerLevel) level();
 
-        // Bewegen entlang der gewählten Achse + Orbit-Loop (Wrap bei ±HALF_ORBIT)
-        if (isAxisX()) {
-            double newX = getX() + SPEED * getOrbitDirection();
-            if (newX >  HALF_ORBIT) newX = -HALF_ORBIT;
-            if (newX < -HALF_ORBIT) newX =  HALF_ORBIT;
-            setPos(newX, ORBIT_HEIGHT, getZ());
-        } else {
-            double newZ = getZ() + SPEED * getOrbitDirection();
-            if (newZ >  HALF_ORBIT) newZ = -HALF_ORBIT;
-            if (newZ < -HALF_ORBIT) newZ =  HALF_ORBIT;
-            setPos(getX(), ORBIT_HEIGHT, newZ);
-        }
+        // Kreisförmige Orbitalbewegung
+        angle += ANGULAR_VELOCITY;
+        double newX = ORBIT_RADIUS * Math.cos(angle);
+        double newZ = ORBIT_RADIUS * Math.sin(angle);
+        setPos(newX, ORBIT_HEIGHT, newZ);
 
         // Kollision prüfen (erst nach 20 Ticks Spawn-Schutz)
         if (tickCount >= 20 && tickCount % COLLISION_CHECK_INTERVAL == 0) {
@@ -161,14 +153,10 @@ public class SatelliteEntity extends Entity {
     // Getter / Setter
     // -------------------------------------------------------------------------
 
-    public float   getHealth()              { return entityData.get(DATA_HEALTH); }
-    public void    setHealth(float h)       { entityData.set(DATA_HEALTH, Math.max(0, Math.min(MAX_HEALTH, h))); }
-    public boolean isActive()               { return entityData.get(DATA_ACTIVE); }
-    public void    setActive(boolean a)     { entityData.set(DATA_ACTIVE, a); }
-    public int     getOrbitDirection()      { return entityData.get(DATA_DIRECTION); }
-    public void    setOrbitDirection(int d) { entityData.set(DATA_DIRECTION, d > 0 ? 1 : -1); }
-    public boolean isAxisX()               { return entityData.get(DATA_AXIS_X); }
-    public void    setAxisX(boolean axisX) { entityData.set(DATA_AXIS_X, axisX); }
+    public float   getHealth()          { return entityData.get(DATA_HEALTH); }
+    public void    setHealth(float h)   { entityData.set(DATA_HEALTH, Math.max(0, Math.min(MAX_HEALTH, h))); }
+    public boolean isActive()           { return entityData.get(DATA_ACTIVE); }
+    public void    setActive(boolean a) { entityData.set(DATA_ACTIVE, a); }
 
     // -------------------------------------------------------------------------
     // NBT
@@ -178,16 +166,14 @@ public class SatelliteEntity extends Entity {
     protected void readAdditionalSaveData(CompoundTag tag) {
         setHealth(tag.getFloat("Health"));
         setActive(tag.getBoolean("Active"));
-        setOrbitDirection(tag.getInt("Direction"));
-        setAxisX(!tag.contains("AxisX") || tag.getBoolean("AxisX"));
+        angle = tag.getDouble("Angle");
     }
 
     @Override
     protected void addAdditionalSaveData(CompoundTag tag) {
-        tag.putFloat("Health",     getHealth());
-        tag.putBoolean("Active",   isActive());
-        tag.putInt("Direction",    getOrbitDirection());
-        tag.putBoolean("AxisX",    isAxisX());
+        tag.putFloat("Health",   getHealth());
+        tag.putBoolean("Active", isActive());
+        tag.putDouble("Angle",   angle);
     }
 
     @Override public boolean isPickable()    { return true; }

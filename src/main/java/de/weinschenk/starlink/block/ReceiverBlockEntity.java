@@ -145,7 +145,7 @@ public class ReceiverBlockEntity extends BlockEntity {
 
     private boolean hasSatelliteInRange(ServerLevel level, BlockPos pos) {
         return SatelliteRegistry.get(level.getServer())
-                .countNear(pos.getX(), pos.getZ(), SATELLITE_RANGE, level.getGameTime()) > 0;
+                .countNear(pos.getX(), pos.getY(), pos.getZ(), level.getGameTime()) > 0;
     }
 
     public boolean isReceiving() {

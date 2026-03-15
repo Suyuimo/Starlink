@@ -130,7 +130,6 @@ public class LaunchControllerV2BlockEntity extends BlockEntity {
         RocketV2Entity rocket = new RocketV2Entity(ModEntities.ROCKET_V2.get(), level);
         rocket.setControllerPos(pos);
         rocket.setSatelliteCount(consumed);
-        rocket.setOrbitAxisX(orbitAxisX);
         if (player != null) rocket.setLaunchingPlayer(player.getUUID());
         rocket.setPos(pos.getX() + 0.5, pos.getY() + 1.0, pos.getZ() + 0.5);
         level.addFreshEntity(rocket);

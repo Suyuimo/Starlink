@@ -2,8 +2,8 @@ package de.weinschenk.starlink.entity;
 
 import com.mojang.logging.LogUtils;
 import de.weinschenk.starlink.block.LaunchControllerBlockEntity;
+import de.weinschenk.starlink.data.SatelliteRegistry;
 import de.weinschenk.starlink.dimension.ModDimensions;
-import de.weinschenk.starlink.dimension.OrbitRoutes;
 import org.slf4j.Logger;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
@@ -26,23 +26,14 @@ public class RocketEntity extends Entity {
 
     private static final Logger LOGGER = LogUtils.getLogger();
 
-    // Blöcke pro Tick die die Rakete steigt
     private static final double RISE_SPEED = 0.5;
-
-    // Ab welcher Y-Koordinate in den Orbit teleportiert wird (Build-Limit 1.20.1)
     private static final double LAUNCH_THRESHOLD_Y = 319.0;
-
-    // Partikel-Abstand in Ticks
     private static final int PARTICLE_INTERVAL = 2;
 
-    // Synced: Phasen-Status für den Client (für visuelle Effekte)
     private static final EntityDataAccessor<Integer> DATA_PHASE =
             SynchedEntityData.defineId(RocketEntity.class, EntityDataSerializers.INT);
 
-    // Ursprüngliche Position des Controllers — um nach dem Start zu benachrichtigen
     private BlockPos controllerPos = BlockPos.ZERO;
-
-    // UUID des Spielers der die Rakete gestartet hat (für Chat-Nachrichten)
     private UUID launchingPlayerUuid = null;
 
     public enum Phase { IGNITION, RISING, DEPARTED }
@@ -70,22 +61,18 @@ public class RocketEntity extends Entity {
                     LOGGER.info("[Starlink] Rakete gezündet bei Y={}", (int) getY());
                     sendChatToPlayer("§6[Starlink] §fRakete gezündet! T-minus...");
                 }
-                // Kurze Zündverzögerung (2 Sekunden = 40 Ticks)
                 if (tickCount >= 40) {
                     LOGGER.info("[Starlink] Rakete startet RISING-Phase");
                     setPhase(Phase.RISING);
                 }
             }
             case RISING -> {
-                // Steigen
                 this.setPos(getX(), getY() + RISE_SPEED, getZ());
 
-                // Partikel: Rauch + Flammen unterhalb der Rakete
                 if (tickCount % PARTICLE_INTERVAL == 0) {
                     spawnThrustParticles((ServerLevel) level());
                 }
 
-                // Fortschritt alle 2 Sekunden im Chat und Log
                 if (tickCount % 40 == 0) {
                     int currentY = (int) getY();
                     int percent = (int) ((currentY / LAUNCH_THRESHOLD_Y) * 100);
@@ -93,52 +80,26 @@ public class RocketEntity extends Entity {
                     sendChatToPlayer("§6[Starlink] §fHöhe: " + currentY + " / " + (int) LAUNCH_THRESHOLD_Y + " §7(" + percent + "%)");
                 }
 
-                // Orbit erreicht?
                 if (getY() >= LAUNCH_THRESHOLD_Y) {
                     teleportToOrbit();
                 }
             }
-            case DEPARTED -> {
-                // Sollte nicht mehr existieren, aber zur Sicherheit
-                this.discard();
-            }
+            case DEPARTED -> this.discard();
         }
     }
 
-    /**
-     * Spawnt Schub-Partikel unterhalb der Rakete.
-     * Flammen + schwarzer Rauch für realistischen Raketeneffekt.
-     */
     private void spawnThrustParticles(ServerLevel level) {
         double x = getX();
         double y = getY() - 0.5;
         double z = getZ();
-
-        // Flammen-Kern
-        level.sendParticles(ParticleTypes.FLAME,
-                x, y, z,
-                8,                  // Anzahl
-                0.15, 0.0, 0.15,   // Spread X/Y/Z
-                0.05);              // Geschwindigkeit
-
-        // Großer Rauch
-        level.sendParticles(ParticleTypes.LARGE_SMOKE,
-                x, y - 0.5, z,
-                12,
-                0.3, 0.1, 0.3,
-                0.02);
-
-        // Glühende Funken
-        level.sendParticles(ParticleTypes.LAVA,
-                x, y, z,
-                3,
-                0.1, 0.0, 0.1,
-                0.0);
+        level.sendParticles(ParticleTypes.FLAME,       x, y,       z, 8,  0.15, 0.0, 0.15, 0.05);
+        level.sendParticles(ParticleTypes.LARGE_SMOKE, x, y - 0.5, z, 12, 0.3,  0.1, 0.3,  0.02);
+        level.sendParticles(ParticleTypes.LAVA,        x, y,       z, 3,  0.1,  0.0, 0.1,  0.0);
     }
 
     /**
-     * Teleportiert die Rakete in die Orbit-Dimension und spawnt dort einen Satelliten.
-     * Benachrichtigt danach den LaunchController.
+     * Berechnet den Orbit-Winkel aus der aktuellen X/Z-Position der Rakete,
+     * platziert den Satelliten auf dem Orbit-Ring und registriert ihn.
      */
     private void teleportToOrbit() {
         ServerLevel orbitLevel = ((ServerLevel) level()).getServer().getLevel(ModDimensions.ORBIT_LEVEL_KEY);
@@ -147,52 +108,32 @@ public class RocketEntity extends Entity {
             return;
         }
 
-        // Achse aus dem LaunchController lesen
-        boolean axisX = true;
-        BlockEntity ctrlBe = level().getBlockEntity(controllerPos);
-        if (ctrlBe instanceof LaunchControllerBlockEntity ctrl) {
-            axisX = ctrl.isOrbitAxisX();
-        }
+        // Winkel aus Starposition der Rakete → Punkt auf dem Orbit-Ring
+        double angle  = Math.atan2(getZ(), getX());
+        double spawnX = SatelliteEntity.ORBIT_RADIUS * Math.cos(angle);
+        double spawnZ = SatelliteEntity.ORBIT_RADIUS * Math.sin(angle);
+        long   startTick = ((ServerLevel) level()).getServer().overworld().getGameTime();
 
-        // Route anhand der gewählten Achse bestimmen
-        double routeZ, routeX;
-        int    direction;
-        if (axisX) {
-            routeZ    = OrbitRoutes.snapToNearestRouteZ(getZ());
-            routeX    = getX();
-            direction = OrbitRoutes.directionForRouteZ(routeZ);
-        } else {
-            routeX    = OrbitRoutes.snapToNearestRouteX(getX());
-            routeZ    = getZ();
-            direction = OrbitRoutes.directionForRouteX(routeX);
-        }
-
-        // Spawn-Chunk vorab force-loaden, sonst landet der Satellit in einem
-        // ungeladenen Chunk und tick() läuft nie → getEntitiesOfClass findet ihn nicht
-        int spawnChunkX = (int) Math.floor(routeX / 16.0);
-        int spawnChunkZ = (int) Math.floor(routeZ / 16.0);
-        orbitLevel.setChunkForced(spawnChunkX, spawnChunkZ, true);
-
-        // Satelliten in der Orbit-Dimension spawnen
         SatelliteEntity satellite = ModEntities.SATELLITE.get().create(orbitLevel);
         if (satellite != null) {
-            satellite.setPos(routeX, SatelliteEntity.ORBIT_HEIGHT, routeZ);
-            satellite.setOrbitDirection(direction);
-            satellite.setAxisX(axisX);
+            satellite.setAngle(angle);
+            satellite.setPos(spawnX, SatelliteEntity.ORBIT_HEIGHT, spawnZ);
             orbitLevel.addFreshEntity(satellite);
-            LOGGER.info("[Starlink] Satellit gespawnt in Orbit-Dimension: X={}, Z={}, Richtung={}", getX(), routeZ, direction);
+            SatelliteRegistry.get(((ServerLevel) level()).getServer())
+                    .register(satellite.getUUID(), angle, startTick);
+            LOGGER.info("[Starlink] Satellit gespawnt im Orbit: Winkel={}, X={}, Z={}",
+                    String.format("%.4f", angle), (int) spawnX, (int) spawnZ);
         } else {
             LOGGER.error("[Starlink] Satellit-Entity konnte nicht erstellt werden!");
         }
 
-        // Controller über den abgeschlossenen Start informieren
+        // Controller benachrichtigen
         BlockEntity be = level().getBlockEntity(controllerPos);
         if (be instanceof LaunchControllerBlockEntity controller) {
             controller.onRocketDeparted();
         }
 
         sendChatToPlayer("§6[Starlink] §aOrbit erreicht! §fSatellit deployed.");
-
         setPhase(Phase.DEPARTED);
         this.discard();
     }
@@ -243,10 +184,6 @@ public class RocketEntity extends Entity {
         tag.putInt("Phase", getPhase().ordinal());
     }
 
-    /**
-     * Stellt sicher, dass der Controller-Block immer benachrichtigt wird,
-     * egal wie die Rakete entfernt wird (killed, discarded, Crash…).
-     */
     @Override
     public void remove(RemovalReason reason) {
         if (!level().isClientSide) {
@@ -258,9 +195,6 @@ public class RocketEntity extends Entity {
         super.remove(reason);
     }
 
-    @Override
-    public boolean isPickable() { return false; }
-
-    @Override
-    public boolean isPushable() { return false; }
+    @Override public boolean isPickable() { return false; }
+    @Override public boolean isPushable() { return false; }
 }

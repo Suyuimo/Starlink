@@ -72,8 +72,9 @@ public class SatelliteRenderer extends EntityRenderer<SatelliteEntity> {
         // 22 Model-Units × 0.9 = ~20 Blöcke Breite (inkl. Solarplatten)
         poseStack.scale(6.0f, 6.0f, 6.0f);
 
-        // Ausrichten entlang der Flugrichtung
-        poseStack.mulPose(Axis.YP.rotationDegrees(entity.getOrbitDirection() > 0 ? 0f : 180f));
+        // Ausrichten entlang der Tangente der kreisförmigen Umlaufbahn
+        // Flugrichtung bei Winkel θ: (-sin θ, 0, cos θ) → Minecraft-Yaw = θ in Grad
+        poseStack.mulPose(Axis.YP.rotationDegrees((float) Math.toDegrees(entity.getAngle())));
 
         VertexConsumer consumer = bufferSource.getBuffer(RenderType.entitySolid(TEXTURE));
 

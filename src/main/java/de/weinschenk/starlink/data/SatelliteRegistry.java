@@ -15,43 +15,32 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Persistent satellite registry.
- * Stores start position + start tick per satellite and computes current position
- * mathematically — no entity ticking required.
+ * Persistentes Satelliten-Register.
+ * Speichert Startwinkel + Starttick und berechnet die aktuelle Position mathematisch.
+ * Alle Satelliten umkreisen den Weltmittelpunkt auf einem Kreis mit Radius ORBIT_RADIUS.
  */
 public class SatelliteRegistry extends SavedData {
 
     public static final String NAME = "starlink_satellites";
 
-    private static final double ORBIT_LENGTH = SatelliteEntity.HALF_ORBIT * 2.0; // 60000
-
     private final Map<UUID, SatEntry> satellites = new HashMap<>();
 
     /**
-     * @param startX    X position at registration time
-     * @param startZ    Z position at registration time
-     * @param startTick Server game tick at registration time
-     * @param direction +1 or -1
-     * @param axisX     true = moves along X, false = moves along Z
+     * @param angle0    Winkel (Radiant) zum Registrierungszeitpunkt
+     * @param startTick Server-Gametick zum Registrierungszeitpunkt
      */
-    public record SatEntry(double startX, double startZ, long startTick,
-                           int direction, boolean axisX) {
+    public record SatEntry(double angle0, long startTick) {
+
+        public double currentAngle(long tick) {
+            return angle0 + (tick - startTick) * SatelliteEntity.ANGULAR_VELOCITY;
+        }
 
         public double currentX(long tick) {
-            if (!axisX) return startX;
-            return wrapOrbit(startX + (tick - startTick) * SatelliteEntity.SPEED * direction);
+            return SatelliteEntity.ORBIT_RADIUS * Math.cos(currentAngle(tick));
         }
 
         public double currentZ(long tick) {
-            if (axisX) return startZ;
-            return wrapOrbit(startZ + (tick - startTick) * SatelliteEntity.SPEED * direction);
-        }
-
-        private static double wrapOrbit(double v) {
-            // wrap into [-HALF_ORBIT, +HALF_ORBIT)
-            double h = SatelliteEntity.HALF_ORBIT;
-            v = ((v + h) % ORBIT_LENGTH + ORBIT_LENGTH) % ORBIT_LENGTH - h;
-            return v;
+            return SatelliteEntity.ORBIT_RADIUS * Math.sin(currentAngle(tick));
         }
     }
 
@@ -64,9 +53,8 @@ public class SatelliteRegistry extends SavedData {
 
     // -------------------------------------------------------------------------
 
-    public void register(UUID id, double startX, double startZ,
-                         long startTick, int direction, boolean axisX) {
-        satellites.put(id, new SatEntry(startX, startZ, startTick, direction, axisX));
+    public void register(UUID id, double angle0, long startTick) {
+        satellites.put(id, new SatEntry(angle0, startTick));
         setDirty();
     }
 
@@ -81,13 +69,21 @@ public class SatelliteRegistry extends SavedData {
         }
     }
 
-    public int countNear(double posX, double posZ, double range, long currentTick) {
+    /**
+     * Zählt Satelliten die innerhalb eines 20°-Zenith-Kegels senkrecht über dem Block stehen.
+     * Bedingung: horizontaler Abstand ≤ (ORBIT_HEIGHT - posY) * tan(20°)
+     */
+    private static final double MAX_H_DIST_FACTOR = Math.tan(Math.toRadians(20.0));
+
+    public int countNear(double posX, double posY, double posZ, long currentTick) {
+        double vDist = de.weinschenk.starlink.entity.SatelliteEntity.ORBIT_HEIGHT - posY;
+        if (vDist <= 0) return 0;
+        double maxHDist = vDist * MAX_H_DIST_FACTOR;
         int count = 0;
         for (SatEntry e : satellites.values()) {
-            if (Math.abs(e.currentX(currentTick) - posX) <= range
-                    && Math.abs(e.currentZ(currentTick) - posZ) <= range) {
-                count++;
-            }
+            double dx = e.currentX(currentTick) - posX;
+            double dz = e.currentZ(currentTick) - posZ;
+            if (dx * dx + dz * dz <= maxHDist * maxHDist) count++;
         }
         return count;
     }
@@ -96,8 +92,9 @@ public class SatelliteRegistry extends SavedData {
         List<SatelliteRenderData> list = new ArrayList<>(satellites.size());
         for (SatEntry e : satellites.values()) {
             list.add(new SatelliteRenderData(
-                    e.currentX(currentTick), e.currentZ(currentTick),
-                    e.direction(), e.axisX()));
+                    e.currentX(currentTick),
+                    e.currentZ(currentTick),
+                    e.currentAngle(currentTick)));
         }
         return list;
     }
@@ -106,7 +103,7 @@ public class SatelliteRegistry extends SavedData {
         return satellites.size();
     }
 
-    /** Read-only view of all entries for entity management. */
+    /** Read-only view für das Entity-Management. */
     public Map<UUID, SatEntry> getEntries() {
         return java.util.Collections.unmodifiableMap(satellites);
     }
@@ -120,11 +117,8 @@ public class SatelliteRegistry extends SavedData {
         ListTag list = tag.getList("Sats", Tag.TAG_COMPOUND);
         for (int i = 0; i < list.size(); i++) {
             CompoundTag s = list.getCompound(i);
-            reg.satellites.put(s.getUUID("Id"), new SatEntry(
-                    s.getDouble("X"), s.getDouble("Z"),
-                    s.getLong("Tick"),
-                    s.getInt("Dir"),
-                    !s.contains("AxisX") || s.getBoolean("AxisX")));
+            reg.satellites.put(s.getUUID("Id"),
+                    new SatEntry(s.getDouble("Angle"), s.getLong("Tick")));
         }
         return reg;
     }
@@ -134,12 +128,9 @@ public class SatelliteRegistry extends SavedData {
         ListTag list = new ListTag();
         satellites.forEach((id, e) -> {
             CompoundTag s = new CompoundTag();
-            s.putUUID("Id", id);
-            s.putDouble("X", e.startX());
-            s.putDouble("Z", e.startZ());
-            s.putLong("Tick", e.startTick());
-            s.putInt("Dir", e.direction());
-            s.putBoolean("AxisX", e.axisX());
+            s.putUUID("Id",       id);
+            s.putDouble("Angle",  e.angle0());
+            s.putLong("Tick",     e.startTick());
             list.add(s);
         });
         tag.put("Sats", list);

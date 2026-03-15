@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.function.Supplier;
 
 /**
- * Server → Client: Aktuelle Positionen aller Satelliten in der Orbit-Dimension.
+ * Server → Client: Aktuelle Positionen aller Satelliten im kreisförmigen Orbit.
  * Wird nur an Spieler gesendet die die OrbitBrille tragen.
  */
 public class SatelliteDataPacket {
@@ -27,8 +27,7 @@ public class SatelliteDataPacket {
         for (SatelliteRenderData data : packet.satellites) {
             buf.writeDouble(data.x());
             buf.writeDouble(data.z());
-            buf.writeInt(data.direction());
-            buf.writeBoolean(data.axisX());
+            buf.writeDouble(data.angle());
         }
     }
 
@@ -36,7 +35,7 @@ public class SatelliteDataPacket {
         int count = buf.readInt();
         List<SatelliteRenderData> list = new ArrayList<>(count);
         for (int i = 0; i < count; i++) {
-            list.add(new SatelliteRenderData(buf.readDouble(), buf.readDouble(), buf.readInt(), buf.readBoolean()));
+            list.add(new SatelliteRenderData(buf.readDouble(), buf.readDouble(), buf.readDouble()));
         }
         return new SatelliteDataPacket(list);
     }
