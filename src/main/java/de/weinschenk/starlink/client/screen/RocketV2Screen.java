@@ -17,8 +17,8 @@ public class RocketV2Screen extends AbstractContainerScreen<RocketV2Menu> {
     public RocketV2Screen(RocketV2Menu menu, Inventory inventory, Component title) {
         super(menu, inventory, title);
         this.imageWidth  = 176;
-        this.imageHeight = 204;
-        this.inventoryLabelY = this.imageHeight - 94; // = 110
+        this.imageHeight = 180;
+        this.inventoryLabelY = 90; // 12px above player inventory at y=102
     }
 
     @Override
@@ -42,6 +42,6 @@ public class RocketV2Screen extends AbstractContainerScreen<RocketV2Menu> {
         int satCount = menu.getSatelliteCount();
         graphics.drawString(font,
                 Component.literal("Satelliten: " + satCount + " / 20"),
-                x + 26, y + 6, 0x404040, false);
+                x + 8, y + 6, 0x404040, false);
     }
 }

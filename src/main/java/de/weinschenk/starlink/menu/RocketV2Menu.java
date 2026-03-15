@@ -37,15 +37,15 @@ public class RocketV2Menu extends AbstractContainerMenu {
             @Override public int getCount() { return DATA_COUNT; }
         };
 
-        // 20 Satelliten-Slots: 4 Spalten × 5 Reihen, ab x=26, y=18
+        // 20 Satelliten-Slots: 5 Spalten × 4 Reihen, ab x=8, y=18
         IItemHandler inv = be.getInventory();
-        for (int row = 0; row < 5; row++) {
-            for (int col = 0; col < 4; col++) {
-                addSlot(new SlotItemHandler(inv, row * 4 + col, 26 + col * 18, 18 + row * 18));
+        for (int row = 0; row < 4; row++) {
+            for (int col = 0; col < 5; col++) {
+                addSlot(new SlotItemHandler(inv, row * 5 + col, 8 + col * 18, 18 + row * 18));
             }
         }
 
-        addPlayerInventory(playerInventory, 8, 118);
+        addPlayerInventory(playerInventory, 8, 102);
         addDataSlots(this.data);
     }
 

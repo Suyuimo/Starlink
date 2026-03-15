@@ -20,10 +20,17 @@ public class ItemTransmitterBlockEntity extends TieredWirelessBlockEntity {
 
     public ItemTransmitterBlockEntity(BlockPos pos, BlockState state) {
         super(ModWirelessBlockEntities.ITEM_TRANSMITTER.get(), pos, state);
+        initEnergy();
     }
 
     public static void tick(Level level, BlockPos pos, BlockState state, ItemTransmitterBlockEntity be) {
         be.refreshSatelliteCount(level, pos);
+        if (level.isClientSide || level.getGameTime() % 20 != 0) return;
+
+        int items = 0;
+        for (int i = 0; i < be.handler.getSlots(); i++) items += be.handler.getStackInSlot(i).getCount();
+        int cost = WirelessTiers.itemEnergyCostPerTick(be.getTier(), be.getCachedSatCount(), items);
+        be.consumeEnergy(cost); // drains energy; if insufficient, drains to 0
     }
 
     @Nonnull

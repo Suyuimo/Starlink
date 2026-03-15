@@ -17,6 +17,24 @@ public final class WirelessTiers {
     private WirelessTiers() {}
 
     /**
+     * RF/t cost for Item Transmitters/Receivers.
+     * Scales with bandwidth capacity (tier × sats) and current fill (items held).
+     */
+    public static int itemEnergyCostPerTick(int tier, int satCount, int itemsHeld) {
+        if (satCount <= 0) return 0;
+        return tier * satCount * 10 + itemsHeld;
+    }
+
+    /**
+     * RF/t cost for Fluid Transmitters/Receivers.
+     * Scales with bandwidth capacity (tier × sats) and current fill (mB held).
+     */
+    public static int fluidEnergyCostPerTick(int tier, int satCount, int fluidMb) {
+        if (satCount <= 0) return 0;
+        return tier * satCount * 10 + fluidMb / 1000;
+    }
+
+    /**
      * Returns energy bandwidth (RF/t) for the given tier (1-8) and satellite count.
      */
     public static long energyBandwidth(int tier, int satCount) {

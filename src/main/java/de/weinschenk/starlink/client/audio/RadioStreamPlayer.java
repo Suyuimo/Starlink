@@ -46,16 +46,21 @@ public class RadioStreamPlayer {
 
     public void stop() {
         running = false;
-        if (audioLine != null) {
-            audioLine.stop();
-            audioLine.close();
-            audioLine = null;
-        }
+        closeAudioLine();
         if (streamThread != null && streamThread.isAlive()) {
             streamThread.interrupt();
             streamThread = null;
         }
         LOGGER.info("Starlink: Radio stream stopped.");
+    }
+
+    private synchronized void closeAudioLine() {
+        SourceDataLine line = audioLine;
+        audioLine = null;
+        if (line != null) {
+            line.stop();
+            line.close();
+        }
     }
 
     public boolean isPlaying() { return running; }
@@ -153,7 +158,7 @@ public class RadioStreamPlayer {
             if (vorbis != 0) STBVorbis.stb_vorbis_close(vorbis);
             MemoryUtil.memFree(inputBuf);
             vorbisInfo.free();
-            if (audioLine != null) { audioLine.stop(); audioLine.close(); audioLine = null; }
+            closeAudioLine();
             if (connection != null) connection.disconnect();
             running = false;
         }

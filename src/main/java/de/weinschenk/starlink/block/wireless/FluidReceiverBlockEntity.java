@@ -27,6 +27,7 @@ public class FluidReceiverBlockEntity extends TieredWirelessBlockEntity implemen
     public FluidReceiverBlockEntity(BlockPos pos, BlockState state) {
         super(ModWirelessBlockEntities.FLUID_RECEIVER.get(), pos, state);
         initTank();
+        initEnergy();
     }
 
     private void initTank() {
@@ -52,6 +53,11 @@ public class FluidReceiverBlockEntity extends TieredWirelessBlockEntity implemen
         int effectiveSats = Math.min(recSats, txSats);
 
         if (effectiveSats <= 0) return;
+
+        // Energy check: both transmitter and receiver must have enough RF
+        int recCost = WirelessTiers.fluidEnergyCostPerTick(be.getTier(), recSats, be.tank.getFluidAmount());
+        int txCost  = WirelessTiers.fluidEnergyCostPerTick(tx.getTier(), txSats,  tx.tank.getFluidAmount());
+        if (!be.consumeEnergy(recCost) || !tx.consumeEnergy(txCost)) return;
 
         int bw = WirelessTiers.fluidBandwidth(be.getTier(), effectiveSats);
         FluidStack toTransfer = tx.tank.drain(bw, IFluidHandler.FluidAction.SIMULATE);

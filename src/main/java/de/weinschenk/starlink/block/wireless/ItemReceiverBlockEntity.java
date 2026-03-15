@@ -26,6 +26,7 @@ public class ItemReceiverBlockEntity extends TieredWirelessBlockEntity implement
 
     public ItemReceiverBlockEntity(BlockPos pos, BlockState state) {
         super(ModWirelessBlockEntities.ITEM_RECEIVER.get(), pos, state);
+        initEnergy();
     }
 
     public static void tick(Level level, BlockPos pos, BlockState state, ItemReceiverBlockEntity be) {
@@ -42,6 +43,16 @@ public class ItemReceiverBlockEntity extends TieredWirelessBlockEntity implement
         int effectiveSats = Math.min(recSats, txSats);
 
         if (effectiveSats <= 0) return;
+
+        // Energy check: both transmitter and receiver must have enough RF
+        int recItems = 0;
+        for (int i = 0; i < be.handler.getSlots(); i++) recItems += be.handler.getStackInSlot(i).getCount();
+        int txItems = 0;
+        for (int i = 0; i < tx.handler.getSlots(); i++) txItems += tx.handler.getStackInSlot(i).getCount();
+
+        int recCost = WirelessTiers.itemEnergyCostPerTick(be.getTier(), recSats, recItems);
+        int txCost  = WirelessTiers.itemEnergyCostPerTick(tx.getTier(), txSats,  txItems);
+        if (!be.consumeEnergy(recCost) || !tx.consumeEnergy(txCost)) return;
 
         int bandwidthItems = WirelessTiers.itemsBandwidth(be.getTier(), effectiveSats);
         int remaining = bandwidthItems;

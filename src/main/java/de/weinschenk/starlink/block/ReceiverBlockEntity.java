@@ -1,8 +1,7 @@
 package de.weinschenk.starlink.block;
 
 import de.weinschenk.starlink.Config;
-import de.weinschenk.starlink.dimension.ModDimensions;
-import de.weinschenk.starlink.entity.SatelliteEntity;
+import de.weinschenk.starlink.data.SatelliteRegistry;
 import de.weinschenk.starlink.network.ModNetwork;
 import de.weinschenk.starlink.network.StartStreamPacket;
 import de.weinschenk.starlink.network.StopStreamPacket;
@@ -16,7 +15,6 @@ import net.minecraft.world.phys.AABB;
 import net.minecraftforge.network.PacketDistributor;
 
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -146,18 +144,8 @@ public class ReceiverBlockEntity extends BlockEntity {
     }
 
     private boolean hasSatelliteInRange(ServerLevel level, BlockPos pos) {
-        ServerLevel orbitLevel = level.getServer().getLevel(ModDimensions.ORBIT_LEVEL_KEY);
-        if (orbitLevel == null) return false;
-
-        AABB searchBox = new AABB(
-                pos.getX() - SATELLITE_RANGE, -2048, pos.getZ() - SATELLITE_RANGE,
-                pos.getX() + SATELLITE_RANGE,  2048, pos.getZ() + SATELLITE_RANGE
-        );
-
-        List<SatelliteEntity> satellites = orbitLevel.getEntitiesOfClass(
-                SatelliteEntity.class, searchBox, SatelliteEntity::isActive);
-
-        return !satellites.isEmpty();
+        return SatelliteRegistry.get(level.getServer())
+                .countNear(pos.getX(), pos.getZ(), SATELLITE_RANGE, level.getGameTime()) > 0;
     }
 
     public boolean isReceiving() {

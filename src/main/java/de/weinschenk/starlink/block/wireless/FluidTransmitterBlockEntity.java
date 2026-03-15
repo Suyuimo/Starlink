@@ -21,6 +21,7 @@ public class FluidTransmitterBlockEntity extends TieredWirelessBlockEntity {
     public FluidTransmitterBlockEntity(BlockPos pos, BlockState state) {
         super(ModWirelessBlockEntities.FLUID_TRANSMITTER.get(), pos, state);
         initTank();
+        initEnergy();
     }
 
     private void initTank() {
@@ -35,6 +36,10 @@ public class FluidTransmitterBlockEntity extends TieredWirelessBlockEntity {
 
     public static void tick(Level level, BlockPos pos, BlockState state, FluidTransmitterBlockEntity be) {
         be.refreshSatelliteCount(level, pos);
+        if (level.isClientSide || level.getGameTime() % 20 != 0) return;
+
+        int cost = WirelessTiers.fluidEnergyCostPerTick(be.getTier(), be.getCachedSatCount(), be.tank.getFluidAmount());
+        be.consumeEnergy(cost);
     }
 
     @Nonnull
