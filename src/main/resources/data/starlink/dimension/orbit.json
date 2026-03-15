@@ -1,0 +1,18 @@
+{
+  "type": "starlink:orbit_type",
+  "generator": {
+    "type": "minecraft:flat",
+    "settings": {
+      "biome": "starlink:orbit",
+      "layers": [
+        {
+          "block": "minecraft:air",
+          "height": 1
+        }
+      ],
+      "lakes": false,
+      "features": false,
+      "structure_overrides": []
+    }
+  }
+}

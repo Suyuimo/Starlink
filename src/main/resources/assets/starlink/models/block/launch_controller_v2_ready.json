@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/cube_bottom_top",
+  "textures": {
+    "top": "starlink:block/launch_controller_v2_ready",
+    "side": "starlink:block/launch_controller_v2",
+    "bottom": "starlink:block/launch_controller_v2"
+  }
+}

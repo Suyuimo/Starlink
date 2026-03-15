@@ -1,0 +1,7 @@
+{
+  "variants": {
+    "": {
+      "model": "starlink:block/infinite_energy_cell"
+    }
+  }
+}

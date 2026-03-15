@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "ISI",
+    "ICI",
+    "III"
+  ],
+  "key": {
+    "I": { "item": "minecraft:iron_ingot" },
+    "S": { "item": "minecraft:smooth_stone" },
+    "C": { "item": "minecraft:cauldron" }
+  },
+  "result": { "item": "starlink:distillation_chamber", "count": 1 }
+}

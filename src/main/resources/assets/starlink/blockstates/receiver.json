@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "active=false": {
+      "model": "starlink:block/receiver_inactive"
+    },
+    "active=true": {
+      "model": "starlink:block/receiver_active"
+    }
+  }
+}

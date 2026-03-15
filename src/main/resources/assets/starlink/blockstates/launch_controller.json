@@ -1,0 +1,6 @@
+{
+  "variants": {
+    "ready=false": { "model": "starlink:block/launch_controller_idle" },
+    "ready=true":  { "model": "starlink:block/launch_controller_ready" }
+  }
+}

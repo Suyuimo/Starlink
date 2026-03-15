@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "III",
+    "IBI",
+    "III"
+  ],
+  "key": {
+    "I": { "item": "minecraft:iron_block" },
+    "B": { "item": "minecraft:blast_furnace" }
+  },
+  "result": { "item": "starlink:launch_pad", "count": 4 }
+}

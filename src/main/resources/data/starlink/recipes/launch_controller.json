@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "RPR",
+    "RCR",
+    "RRR"
+  ],
+  "key": {
+    "R": { "item": "minecraft:redstone" },
+    "P": { "item": "minecraft:comparator" },
+    "C": { "item": "starlink:launch_pad" }
+  },
+  "result": { "item": "starlink:launch_controller", "count": 1 }
+}

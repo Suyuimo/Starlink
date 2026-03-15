@@ -1,0 +1,6 @@
+{
+  "variants": {
+    "active=false": { "model": "starlink:block/distillation_chamber_idle" },
+    "active=true":  { "model": "starlink:block/distillation_chamber_active" }
+  }
+}

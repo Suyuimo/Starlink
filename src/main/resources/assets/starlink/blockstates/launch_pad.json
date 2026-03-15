@@ -1,0 +1,5 @@
+{
+  "variants": {
+    "": { "model": "starlink:block/launch_pad" }
+  }
+}
