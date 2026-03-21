@@ -45,16 +45,25 @@ public class ModCommands {
                         .requires(src -> src.hasPermission(2))
                         .then(Commands.argument("count", IntegerArgumentType.integer(1, 2000))
                             .executes(ctx -> spawnSatellites(ctx.getSource(),
-                                    IntegerArgumentType.getInteger(ctx, "count"), 0))
+                                    IntegerArgumentType.getInteger(ctx, "count"), 0, 0))
                             .then(Commands.argument("offset", IntegerArgumentType.integer(0))
                                 .executes(ctx -> spawnSatellites(ctx.getSource(),
                                         IntegerArgumentType.getInteger(ctx, "count"),
-                                        IntegerArgumentType.getInteger(ctx, "offset"))))))
+                                        IntegerArgumentType.getInteger(ctx, "offset"), 0))
+                                .then(Commands.argument("orbit", IntegerArgumentType.integer(0, 63))
+                                    .executes(ctx -> spawnSatellites(ctx.getSource(),
+                                            IntegerArgumentType.getInteger(ctx, "count"),
+                                            IntegerArgumentType.getInteger(ctx, "offset"),
+                                            IntegerArgumentType.getInteger(ctx, "orbit")))))))
                     .then(Commands.literal("fill")
                         .requires(src -> src.hasPermission(2))
                         .then(Commands.argument("count", IntegerArgumentType.integer(1, 2000))
                             .executes(ctx -> fillOrbit(ctx.getSource(),
-                                    IntegerArgumentType.getInteger(ctx, "count"))))))
+                                    IntegerArgumentType.getInteger(ctx, "count"), 0))
+                            .then(Commands.argument("orbit", IntegerArgumentType.integer(0, 63))
+                                .executes(ctx -> fillOrbit(ctx.getSource(),
+                                        IntegerArgumentType.getInteger(ctx, "count"),
+                                        IntegerArgumentType.getInteger(ctx, "orbit")))))))
                 .then(Commands.literal("controller")
                     .then(Commands.literal("reset")
                         .requires(src -> src.hasPermission(2))
@@ -102,7 +111,7 @@ public class ModCommands {
      * jeweils mit {@code SATELLITE_SPACING} Bogenabstand.
      * {@code offsetBlocks} verschiebt den Startpunkt zusätzlich entlang des Orbits.
      */
-    private static int spawnSatellites(CommandSourceStack source, int count, int offsetBlocks) {
+    private static int spawnSatellites(CommandSourceStack source, int count, int offsetBlocks, int orbitId) {
         ServerLevel orbitLevel = source.getServer().getLevel(ModDimensions.ORBIT_LEVEL_KEY);
         if (orbitLevel == null) {
             source.sendFailure(Component.literal("Orbit-Dimension nicht gefunden!"));
@@ -111,7 +120,8 @@ public class ModCommands {
 
         Vec3 pos = source.getPosition();
         double baseAngle = Math.atan2(pos.z, pos.x)
-                + offsetBlocks / SatelliteEntity.ORBIT_RADIUS;
+                + offsetBlocks / SatelliteEntity.ORBIT_RADIUS
+                + orbitId * (2 * Math.PI / 64.0);
 
         double angularSpacing = SATELLITE_SPACING / SatelliteEntity.ORBIT_RADIUS;
 
@@ -119,24 +129,27 @@ public class ModCommands {
         long startTick = source.getServer().overworld().getGameTime();
         int spawned = 0;
 
+        double r = SatelliteEntity.ORBIT_RADIUS;
         for (int i = 0; i < count; i++) {
             double angle  = baseAngle + i * angularSpacing;
-            double spawnX = SatelliteEntity.ORBIT_RADIUS * Math.cos(angle);
-            double spawnZ = SatelliteEntity.ORBIT_RADIUS * Math.sin(angle);
+            double spawnX = r * Math.cos(angle);
+            double spawnZ = r * Math.sin(angle);
 
             SatelliteEntity satellite = ModEntities.SATELLITE.get().create(orbitLevel);
             if (satellite != null) {
                 satellite.setAngle(angle);
+                satellite.setOrbitId(orbitId);
                 satellite.setPos(spawnX, SatelliteEntity.ORBIT_HEIGHT, spawnZ);
                 orbitLevel.addFreshEntity(satellite);
-                registry.register(satellite.getUUID(), angle, startTick);
+                registry.register(satellite.getUUID(), orbitId, angle, startTick);
+                satellite.setVelocityFactor(registry.getOrbitVelocityFactor(orbitId));
                 spawned++;
             }
         }
 
         int finalSpawned = spawned;
         source.sendSuccess(() -> Component.literal(
-                "§6[Starlink] §a" + finalSpawned + " Satellit(en) gespawnt §7(Offset " + offsetBlocks + " Blöcke)"
+                "§6[Starlink] §a" + finalSpawned + " Satellit(en) gespawnt §7(Orbit " + orbitId + " / R=" + (int)r + " Blöcke)"
         ), true);
         return finalSpawned;
     }
@@ -144,30 +157,35 @@ public class ModCommands {
     /**
      * Verteilt {@code count} Satelliten gleichmäßig über den gesamten Orbit-Ring (2π).
      */
-    private static int fillOrbit(CommandSourceStack source, int count) {
+    private static int fillOrbit(CommandSourceStack source, int count, int orbitId) {
         ServerLevel orbitLevel = source.getServer().getLevel(ModDimensions.ORBIT_LEVEL_KEY);
         if (orbitLevel == null) {
             source.sendFailure(Component.literal("Orbit-Dimension nicht gefunden!"));
             return 0;
         }
 
+        // Jeder Orbit bekommt einen festen Versatz (45° pro Orbit), damit sie sofort getrennt sichtbar sind
+        double orbitOffset    = orbitId * (2 * Math.PI / 64.0);
         double angularSpacing = (2 * Math.PI) / count;
 
         SatelliteRegistry registry = SatelliteRegistry.get(source.getServer());
         long startTick = source.getServer().overworld().getGameTime();
         int spawned = 0;
 
+        double rf = SatelliteEntity.ORBIT_RADIUS;
         for (int i = 0; i < count; i++) {
-            double angle  = i * angularSpacing;
-            double spawnX = SatelliteEntity.ORBIT_RADIUS * Math.cos(angle);
-            double spawnZ = SatelliteEntity.ORBIT_RADIUS * Math.sin(angle);
+            double angle  = orbitOffset + i * angularSpacing;
+            double spawnX = rf * Math.cos(angle);
+            double spawnZ = rf * Math.sin(angle);
 
             SatelliteEntity satellite = ModEntities.SATELLITE.get().create(orbitLevel);
             if (satellite != null) {
                 satellite.setAngle(angle);
+                satellite.setOrbitId(orbitId);
                 satellite.setPos(spawnX, SatelliteEntity.ORBIT_HEIGHT, spawnZ);
                 orbitLevel.addFreshEntity(satellite);
-                registry.register(satellite.getUUID(), angle, startTick);
+                registry.register(satellite.getUUID(), orbitId, angle, startTick);
+                satellite.setVelocityFactor(registry.getOrbitVelocityFactor(orbitId));
                 spawned++;
             }
         }
@@ -175,7 +193,7 @@ public class ModCommands {
         int finalSpawned = spawned;
         int spacingBlocks = (int)(angularSpacing * SatelliteEntity.ORBIT_RADIUS);
         source.sendSuccess(() -> Component.literal(
-                "§6[Starlink] §a" + finalSpawned + " Satellit(en) gleichmäßig verteilt §7(Abstand ~" + spacingBlocks + " Blöcke)"
+                "§6[Starlink] §a" + finalSpawned + " Satellit(en) gleichmäßig verteilt §7(Orbit " + orbitId + ", Abstand ~" + spacingBlocks + " Blöcke)"
         ), true);
         return finalSpawned;
     }

@@ -44,8 +44,10 @@ public class LaunchControllerV2BlockEntity extends BlockEntity {
     public static final Set<LaunchControllerV2BlockEntity> ALL_LOADED =
             Collections.synchronizedSet(Collections.newSetFromMap(new WeakHashMap<>()));
 
-    private boolean launching   = false;
-    private boolean orbitAxisX  = true;
+    public static final int MAX_ORBIT_ID = 63;
+
+    private boolean launching = false;
+    private int     orbitId   = 0;
 
     // ---- Energiespeicher -------------------------------------------------------
 
@@ -119,7 +121,7 @@ public class LaunchControllerV2BlockEntity extends BlockEntity {
         if (satCount == 0) return LaunchResult.NO_SATELLITES;
 
         // Satelliten verbrauchen, Energie abziehen, Raketenblock entfernen
-        int consumed = rbe.consumeAllSatellites();
+        var configs = rbe.consumeAllSatellitesWithConfig();
         energyStorage.consume(LAUNCH_COST);
         launching = true;
         setChanged();
@@ -129,12 +131,13 @@ public class LaunchControllerV2BlockEntity extends BlockEntity {
         // RocketV2Entity spawnen
         RocketV2Entity rocket = new RocketV2Entity(ModEntities.ROCKET_V2.get(), level);
         rocket.setControllerPos(pos);
-        rocket.setSatelliteCount(consumed);
+        rocket.setSatelliteConfigs(configs);
+        rocket.setOrbitId(orbitId);
         if (player != null) rocket.setLaunchingPlayer(player.getUUID());
         rocket.setPos(pos.getX() + 0.5, pos.getY() + 1.0, pos.getZ() + 0.5);
         level.addFreshEntity(rocket);
 
-        LOGGER.info("[Starlink] RocketV2 launched with {} satellites, axisX={}", consumed, orbitAxisX);
+        LOGGER.info("[Starlink] RocketV2 launched with {} satellites, orbit={}", configs.size(), orbitId);
         return LaunchResult.SUCCESS;
     }
 
@@ -159,8 +162,8 @@ public class LaunchControllerV2BlockEntity extends BlockEntity {
     public int  getEnergyStored()       { return energyStorage.getEnergyStored(); }
     public int  getEnergyStoredKilo()   { return energyStorage.getEnergyStored() / 1000; }
     public boolean isLaunching()        { return launching; }
-    public boolean isOrbitAxisX()       { return orbitAxisX; }
-    public void setOrbitAxisX(boolean v){ orbitAxisX = v; setChanged(); }
+    public int  getOrbitId()            { return orbitId; }
+    public void setOrbitId(int id)      { orbitId = Math.max(0, Math.min(MAX_ORBIT_ID, id)); setChanged(); }
 
     // ContainerData client-sync only
     public void setEnergyKiloSync(int kiloFe) { energyStorage.setEnergyDirect(kiloFe * 1000); }
@@ -179,17 +182,17 @@ public class LaunchControllerV2BlockEntity extends BlockEntity {
     @Override
     protected void saveAdditional(CompoundTag tag) {
         super.saveAdditional(tag);
-        tag.putInt("Energy",     energyStorage.getEnergyStored());
-        tag.putBoolean("Launching",  launching);
-        tag.putBoolean("OrbitAxisX", orbitAxisX);
+        tag.putInt("Energy",    energyStorage.getEnergyStored());
+        tag.putBoolean("Launching", launching);
+        tag.putInt("OrbitId",   orbitId);
     }
 
     @Override
     public void load(CompoundTag tag) {
         super.load(tag);
         energyStorage.setEnergyDirect(tag.getInt("Energy"));
-        launching   = tag.getBoolean("Launching");
-        orbitAxisX  = !tag.contains("OrbitAxisX") || tag.getBoolean("OrbitAxisX");
+        launching = tag.getBoolean("Launching");
+        orbitId   = tag.contains("OrbitId") ? tag.getInt("OrbitId") : 0;
     }
 
     // ---------------------------------------------------------------------------

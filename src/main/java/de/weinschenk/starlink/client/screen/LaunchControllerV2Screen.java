@@ -17,8 +17,13 @@ public class LaunchControllerV2Screen extends AbstractContainerScreen<LaunchCont
     private static final ResourceLocation TEXTURE =
             new ResourceLocation(Starlink.MODID, "textures/gui/launch_controller_v2.png");
 
-    private static final int MAX_ENERGY_KILO = LaunchControllerV2BlockEntity.MAX_ENERGY / 1000;   // 10000
-    private static final int COST_KILO       = LaunchControllerV2BlockEntity.LAUNCH_COST / 1000;  // 5000
+    private static final int MAX_ENERGY_KILO = LaunchControllerV2BlockEntity.MAX_ENERGY / 1000;
+    private static final int COST_KILO       = LaunchControllerV2BlockEntity.LAUNCH_COST / 1000;
+
+    private static final int[] ORBIT_LABEL_COLORS = {
+        0x64B4FF, 0xFFB432, 0xB450FF, 0xFF5050,
+        0x50FF50, 0xFFFF50, 0xFF96C8, 0x96FFE6
+    };
 
     public LaunchControllerV2Screen(LaunchControllerV2Menu menu, Inventory inventory, Component title) {
         super(menu, inventory, title);
@@ -33,22 +38,24 @@ public class LaunchControllerV2Screen extends AbstractContainerScreen<LaunchCont
         int x = (width  - imageWidth)  / 2;
         int y = (height - imageHeight) / 2;
 
-        // Orbit-Achse-Toggle Button
+        // Orbit-Auswahl: < Orbit X >
         addRenderableWidget(Button.builder(
-                Component.literal("Achse: " + (menu.isAxisX() ? "X ►" : "Z ►")),
-                btn -> {
-                    minecraft.gameMode.handleInventoryButtonClick(menu.containerId,
-                            LaunchControllerV2Menu.BTN_TOGGLE_AXIS);
-                }
-        ).bounds(x + 7, y + 54, 80, 16).build());
+                Component.literal("<"),
+                btn -> minecraft.gameMode.handleInventoryButtonClick(menu.containerId,
+                        LaunchControllerV2Menu.BTN_ORBIT_PREV)
+        ).bounds(x + 7, y + 54, 20, 16).build());
+
+        addRenderableWidget(Button.builder(
+                Component.literal(">"),
+                btn -> minecraft.gameMode.handleInventoryButtonClick(menu.containerId,
+                        LaunchControllerV2Menu.BTN_ORBIT_NEXT)
+        ).bounds(x + 63, y + 54, 20, 16).build());
 
         // Launch Button
         addRenderableWidget(Button.builder(
                 Component.literal("§c§l🚀 START"),
-                btn -> {
-                    minecraft.gameMode.handleInventoryButtonClick(menu.containerId,
-                            LaunchControllerV2Menu.BTN_LAUNCH);
-                }
+                btn -> minecraft.gameMode.handleInventoryButtonClick(menu.containerId,
+                        LaunchControllerV2Menu.BTN_LAUNCH)
         ).bounds(x + 93, y + 54, 76, 16).build());
     }
 
@@ -84,6 +91,7 @@ public class LaunchControllerV2Screen extends AbstractContainerScreen<LaunchCont
 
         int energyKilo = menu.getEnergyKilo();
         int satCount   = menu.getSatCount();
+        int orbitId    = menu.getOrbitId();
 
         // Energie-Text
         graphics.drawString(font,
@@ -96,19 +104,14 @@ public class LaunchControllerV2Screen extends AbstractContainerScreen<LaunchCont
                 "Satelliten: " + satCount + " / 20",
                 x + 7, y + 34, 0x404040, false);
 
-        // Achse
+        // Orbit-Anzeige (zwischen den < >-Buttons)
         graphics.drawString(font,
-                "Orbit-Achse: " + (menu.isAxisX() ? "X" : "Z"),
-                x + 7, y + 44, 0x004444, false);
+                "Orbit " + orbitId,
+                x + 30, y + 58, ORBIT_LABEL_COLORS[orbitId % ORBIT_LABEL_COLORS.length], false);
 
         // Kosten-Hinweis
         graphics.drawString(font,
                 "Start kostet: 5.000.000 FE",
                 x + 7, y + 74, 0x888888, false);
-
-        // Achse-Button-Label live aktualisieren (erstes Widget)
-        if (!renderables.isEmpty() && renderables.get(0) instanceof Button btn) {
-            btn.setMessage(Component.literal("Achse: " + (menu.isAxisX() ? "X ►" : "Z ►")));
-        }
     }
 }

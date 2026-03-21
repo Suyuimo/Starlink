@@ -139,6 +139,8 @@ public class ServerEventHandler {
 
             entity.setRegistryUUID(id);
             entity.setAngle(sat.currentAngle(gameTime));
+            entity.setOrbitId(sat.orbitId());
+            entity.setVelocityFactor(sat.velocityFactor());
             entity.setPos(cx, SatelliteEntity.ORBIT_HEIGHT, cz);
             // Nur in Map eintragen wenn Spawn erfolgreich war (Chunk muss geladen sein)
             if (orbitLevel.addFreshEntity(entity)) {

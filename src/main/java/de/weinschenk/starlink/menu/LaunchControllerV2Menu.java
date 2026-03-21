@@ -18,12 +18,13 @@ public class LaunchControllerV2Menu extends AbstractContainerMenu {
     // Energy / 1000 → max 10000 für 10 Mio FE (passt in short)
     public static final int DATA_ENERGY_KILO = 0;   // energy / 1000
     public static final int DATA_SAT_COUNT   = 1;   // Satelliten in Rakete oben
-    public static final int DATA_AXIS_X      = 2;   // 1 = X-Achse, 0 = Z-Achse
+    public static final int DATA_ORBIT_ID    = 2;   // Orbit-Index 0–7
     public static final int DATA_COUNT       = 3;
 
     // clickMenuButton IDs
-    public static final int BTN_TOGGLE_AXIS = 0;
-    public static final int BTN_LAUNCH      = 1;
+    public static final int BTN_ORBIT_PREV = 0;
+    public static final int BTN_ORBIT_NEXT = 1;
+    public static final int BTN_LAUNCH     = 2;
 
     private final LaunchControllerV2BlockEntity blockEntity;
     private final ContainerData data;
@@ -38,13 +39,13 @@ public class LaunchControllerV2Menu extends AbstractContainerMenu {
                 return switch (index) {
                     case DATA_ENERGY_KILO -> be.getEnergyStoredKilo();
                     case DATA_SAT_COUNT   -> be.getSatelliteCountAbove();
-                    case DATA_AXIS_X      -> be.isOrbitAxisX() ? 1 : 0;
+                    case DATA_ORBIT_ID    -> be.getOrbitId();
                     default -> 0;
                 };
             }
             @Override public void set(int index, int value) {
                 if (index == DATA_ENERGY_KILO) be.setEnergyKiloSync(value);
-                if (index == DATA_AXIS_X)      be.setOrbitAxisX(value != 0);
+                if (index == DATA_ORBIT_ID)    be.setOrbitId(value);
             }
             @Override public int getCount() { return DATA_COUNT; }
         };
@@ -62,8 +63,12 @@ public class LaunchControllerV2Menu extends AbstractContainerMenu {
 
     @Override
     public boolean clickMenuButton(Player player, int id) {
-        if (id == BTN_TOGGLE_AXIS) {
-            blockEntity.setOrbitAxisX(!blockEntity.isOrbitAxisX());
+        if (id == BTN_ORBIT_PREV) {
+            blockEntity.setOrbitId(blockEntity.getOrbitId() - 1);
+            return true;
+        }
+        if (id == BTN_ORBIT_NEXT) {
+            blockEntity.setOrbitId(blockEntity.getOrbitId() + 1);
             return true;
         }
         if (id == BTN_LAUNCH) {
@@ -85,9 +90,9 @@ public class LaunchControllerV2Menu extends AbstractContainerMenu {
     @Override
     public boolean stillValid(Player player) { return true; }
 
-    public int     getEnergyKilo()  { return data.get(DATA_ENERGY_KILO); }
-    public int     getSatCount()    { return data.get(DATA_SAT_COUNT); }
-    public boolean isAxisX()        { return data.get(DATA_AXIS_X) != 0; }
+    public int getEnergyKilo() { return data.get(DATA_ENERGY_KILO); }
+    public int getSatCount()   { return data.get(DATA_SAT_COUNT); }
+    public int getOrbitId()    { return data.get(DATA_ORBIT_ID); }
 
     private void addPlayerInventory(Inventory inv) {
         for (int row = 0; row < 3; row++)

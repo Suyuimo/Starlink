@@ -28,6 +28,9 @@ public class SatelliteDataPacket {
             buf.writeDouble(data.x());
             buf.writeDouble(data.z());
             buf.writeDouble(data.angle());
+            buf.writeByte(data.orbitId());
+            buf.writeBoolean(data.isPrivate());
+            buf.writeUtf(data.pin(), 64);
         }
     }
 
@@ -35,7 +38,13 @@ public class SatelliteDataPacket {
         int count = buf.readInt();
         List<SatelliteRenderData> list = new ArrayList<>(count);
         for (int i = 0; i < count; i++) {
-            list.add(new SatelliteRenderData(buf.readDouble(), buf.readDouble(), buf.readDouble()));
+            double x        = buf.readDouble();
+            double z        = buf.readDouble();
+            double angle    = buf.readDouble();
+            int    orbitId  = buf.readByte();
+            boolean priv    = buf.readBoolean();
+            String  pin     = buf.readUtf(64);
+            list.add(new SatelliteRenderData(x, z, angle, orbitId, priv, pin));
         }
         return new SatelliteDataPacket(list);
     }

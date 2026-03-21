@@ -15,6 +15,9 @@ import net.minecraftforge.items.ItemStackHandler;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class RocketV2BlockEntity extends BlockEntity {
 
     public static final int SATELLITE_SLOTS = 20;
@@ -57,6 +60,27 @@ public class RocketV2BlockEntity extends BlockEntity {
         setChanged();
         return count;
     }
+
+    /**
+     * Leert das Inventar und gibt pro Satellit seine Privacy-Konfiguration zurück.
+     * Wird von RocketV2Entity.deployToOrbit() verwendet.
+     */
+    public List<SatelliteConfig> consumeAllSatellitesWithConfig() {
+        List<SatelliteConfig> configs = new ArrayList<>();
+        for (int i = 0; i < SATELLITE_SLOTS; i++) {
+            ItemStack stack = inventory.getStackInSlot(i);
+            if (!stack.isEmpty()) {
+                configs.add(new SatelliteConfig(
+                        SatelliteItem.isPrivate(stack),
+                        SatelliteItem.getPin(stack)));
+                inventory.setStackInSlot(i, ItemStack.EMPTY);
+            }
+        }
+        setChanged();
+        return configs;
+    }
+
+    public record SatelliteConfig(boolean isPrivate, String pin) {}
 
     public ItemStackHandler getInventory() {
         return inventory;

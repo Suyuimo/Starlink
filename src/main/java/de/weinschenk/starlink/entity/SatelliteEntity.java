@@ -18,11 +18,10 @@ import java.util.List;
 
 public class SatelliteEntity extends Entity {
 
-    public static final double ORBIT_HEIGHT = 100.0;
-    public static final double SPEED = 10.0;
-    public static final double ORBIT_RADIUS = 10_000.0;
-
-    /** Winkelgeschwindigkeit in Radiant pro Tick. */
+    public static final double ORBIT_HEIGHT       = 100.0;
+    public static final double SPEED              = 10.0;
+    public static final double ORBIT_RADIUS       = 10_000.0;
+    /** Winkelgeschwindigkeit in Radiant pro Tick (Basis, ohne velocityFactor). */
     public static final double ANGULAR_VELOCITY = SPEED / ORBIT_RADIUS;
 
     private static final double COLLISION_RADIUS = 15.0;
@@ -40,14 +39,28 @@ public class SatelliteEntity extends Entity {
     /** Aktueller Orbit-Winkel in Radiant. */
     private double angle = 0.0;
 
+    /** Orbit-Index (0–7), bestimmt Farbgebung und Gruppenzugehörigkeit. */
+    private int orbitId = 0;
+
+    /**
+     * Multiplikator für die Winkelgeschwindigkeit dieses Orbits.
+     * Positiv = Uhrzeigersinn, negativ = Gegenuhrzeigersinn.
+     * Wird aus der SatelliteRegistry geladen, nicht persistiert (kommt immer frisch aus Registry).
+     */
+    private double velocityFactor = 1.0;
+
     /** Registry-UUID dieser Entity (kann von der Entity-UUID abweichen). */
     private UUID registryUUID = null;
 
     public void setRegistryUUID(UUID id) { this.registryUUID = id; }
     public UUID getRegistryUUID()        { return registryUUID != null ? registryUUID : getUUID(); }
 
-    public void   setAngle(double angle) { this.angle = angle; }
-    public double getAngle()             { return angle; }
+    public void   setAngle(double angle)          { this.angle = angle; }
+    public double getAngle()                      { return angle; }
+    public void   setOrbitId(int id)              { this.orbitId = id; }
+    public int    getOrbitId()                    { return orbitId; }
+    public void   setVelocityFactor(double f)     { this.velocityFactor = f; }
+    public double getVelocityFactor()             { return velocityFactor; }
 
     public SatelliteEntity(EntityType<?> type, Level level) {
         super(type, level);
@@ -68,7 +81,7 @@ public class SatelliteEntity extends Entity {
         ServerLevel serverLevel = (ServerLevel) level();
 
         // Kreisförmige Orbitalbewegung
-        angle += ANGULAR_VELOCITY;
+        angle += ANGULAR_VELOCITY * velocityFactor;
         double newX = ORBIT_RADIUS * Math.cos(angle);
         double newZ = ORBIT_RADIUS * Math.sin(angle);
         setPos(newX, ORBIT_HEIGHT, newZ);
@@ -166,7 +179,8 @@ public class SatelliteEntity extends Entity {
     protected void readAdditionalSaveData(CompoundTag tag) {
         setHealth(tag.getFloat("Health"));
         setActive(tag.getBoolean("Active"));
-        angle = tag.getDouble("Angle");
+        angle   = tag.getDouble("Angle");
+        orbitId = tag.contains("OrbitId") ? tag.getInt("OrbitId") : 0;
     }
 
     @Override
@@ -174,6 +188,7 @@ public class SatelliteEntity extends Entity {
         tag.putFloat("Health",   getHealth());
         tag.putBoolean("Active", isActive());
         tag.putDouble("Angle",   angle);
+        tag.putInt("OrbitId",    orbitId);
     }
 
     @Override public boolean isPickable()    { return true; }

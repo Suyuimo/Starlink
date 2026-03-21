@@ -1,5 +1,6 @@
 package de.weinschenk.starlink.item;
 
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.entity.EquipmentSlot;
@@ -15,20 +16,28 @@ public class OrbitGlassesItem extends Item implements Equipable {
         super(new Item.Properties().stacksTo(1));
     }
 
-    /** Vanilla-Interface: ermöglicht Rechtsklick-Equipping in den Helm-Slot. */
     @Override
-    public EquipmentSlot getEquipmentSlot() {
-        return EquipmentSlot.HEAD;
-    }
+    public EquipmentSlot getEquipmentSlot()             { return EquipmentSlot.HEAD; }
 
-    /** Forge-Extension: weitere Systeme (Dispenser, etc.) erkennen den Slot. */
     @Override
-    public EquipmentSlot getEquipmentSlot(ItemStack stack) {
-        return EquipmentSlot.HEAD;
-    }
+    public EquipmentSlot getEquipmentSlot(ItemStack s)  { return EquipmentSlot.HEAD; }
 
+    /**
+     * Normaler Rechtsklick: Brille anlegen.
+     * Schleichen + Rechtsklick: Filter-Modus wechseln (Alle → Öffentlich → Privat → Alle …).
+     */
     @Override
     public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
+        ItemStack stack = player.getItemInHand(hand);
+        if (player.isShiftKeyDown()) {
+            if (!level.isClientSide) {
+                GlassesFilterMode next = GlassesFilterMode.get(stack).next();
+                GlassesFilterMode.set(stack, next);
+                player.displayClientMessage(
+                        Component.literal("§6[Starlink] §fFilter: §b" + next.displayName()), true);
+            }
+            return InteractionResultHolder.success(stack);
+        }
         return this.swapWithEquipmentSlot(this, level, player, hand);
     }
 }

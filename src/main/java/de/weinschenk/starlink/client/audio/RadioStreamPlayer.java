@@ -1,6 +1,8 @@
 package de.weinschenk.starlink.client.audio;
 
 import com.mojang.logging.LogUtils;
+import net.minecraft.client.Minecraft;
+import net.minecraft.sounds.SoundSource;
 import org.lwjgl.stb.STBVorbis;
 import org.lwjgl.stb.STBVorbisInfo;
 import org.lwjgl.system.MemoryStack;
@@ -64,6 +66,15 @@ public class RadioStreamPlayer {
     }
 
     public boolean isPlaying() { return running; }
+
+    /** Liefert das kombinierte Lautstärke-Produkt aus Master- und Records-Regler (0.0–1.0). */
+    private static float getMcVolume() {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc == null || mc.options == null) return 1.0f;
+        float master  = mc.options.getSoundSourceVolume(SoundSource.MASTER);
+        float records = mc.options.getSoundSourceVolume(SoundSource.RECORDS);
+        return master * records;
+    }
 
     // -------------------------------------------------------------------------
 
@@ -134,13 +145,14 @@ public class RadioStreamPlayer {
                     int numChannels    = channelsBuf.get(0);
                     long channelArray  = outputPtr.get(0); // float**
 
-                    // float[] → int16 PCM interleaved
+                    // float[] → int16 PCM interleaved, skaliert nach MC-Lautstärke
+                    float volume = getMcVolume();
                     byte[] pcm = new byte[numSamples * numChannels * 2];
                     for (int i = 0; i < numSamples; i++) {
                         for (int c = 0; c < numChannels; c++) {
                             long chPtr = MemoryUtil.memGetAddress(channelArray + (long) c * 8);
                             float v = MemoryUtil.memGetFloat(chPtr + (long) i * 4);
-                            int s = Math.max(-32768, Math.min(32767, (int)(v * 32767.0f)));
+                            int s = Math.max(-32768, Math.min(32767, (int)(v * volume * 32767.0f)));
                             int idx = (i * numChannels + c) * 2;
                             pcm[idx]     = (byte)(s & 0xFF);
                             pcm[idx + 1] = (byte)((s >> 8) & 0xFF);

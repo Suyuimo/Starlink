@@ -34,7 +34,8 @@ public class RocketEntity extends Entity {
             SynchedEntityData.defineId(RocketEntity.class, EntityDataSerializers.INT);
 
     private BlockPos controllerPos = BlockPos.ZERO;
-    private UUID launchingPlayerUuid = null;
+    private UUID     launchingPlayerUuid = null;
+    private int      orbitId = 0;
 
     public enum Phase { IGNITION, RISING, DEPARTED }
 
@@ -110,17 +111,20 @@ public class RocketEntity extends Entity {
 
         // Winkel aus Starposition der Rakete → Punkt auf dem Orbit-Ring
         double angle  = Math.atan2(getZ(), getX());
-        double spawnX = SatelliteEntity.ORBIT_RADIUS * Math.cos(angle);
-        double spawnZ = SatelliteEntity.ORBIT_RADIUS * Math.sin(angle);
+        double r      = SatelliteEntity.ORBIT_RADIUS;
+        double spawnX = r * Math.cos(angle);
+        double spawnZ = r * Math.sin(angle);
         long   startTick = ((ServerLevel) level()).getServer().overworld().getGameTime();
 
         SatelliteEntity satellite = ModEntities.SATELLITE.get().create(orbitLevel);
         if (satellite != null) {
             satellite.setAngle(angle);
+            satellite.setOrbitId(orbitId);
             satellite.setPos(spawnX, SatelliteEntity.ORBIT_HEIGHT, spawnZ);
             orbitLevel.addFreshEntity(satellite);
-            SatelliteRegistry.get(((ServerLevel) level()).getServer())
-                    .register(satellite.getUUID(), angle, startTick);
+            SatelliteRegistry reg = SatelliteRegistry.get(((ServerLevel) level()).getServer());
+            reg.register(satellite.getUUID(), orbitId, angle, startTick);
+            satellite.setVelocityFactor(reg.getOrbitVelocityFactor(orbitId));
             LOGGER.info("[Starlink] Satellit gespawnt im Orbit: Winkel={}, X={}, Z={}",
                     String.format("%.4f", angle), (int) spawnX, (int) spawnZ);
         } else {
@@ -150,13 +154,9 @@ public class RocketEntity extends Entity {
         this.entityData.set(DATA_PHASE, phase.ordinal());
     }
 
-    public void setControllerPos(BlockPos pos) {
-        this.controllerPos = pos;
-    }
-
-    public void setLaunchingPlayer(UUID uuid) {
-        this.launchingPlayerUuid = uuid;
-    }
+    public void setControllerPos(BlockPos pos)  { this.controllerPos = pos; }
+    public void setLaunchingPlayer(UUID uuid)   { this.launchingPlayerUuid = uuid; }
+    public void setOrbitId(int id)              { this.orbitId = id; }
 
     private void sendChatToPlayer(String message) {
         if (launchingPlayerUuid == null || !(level() instanceof ServerLevel serverLevel)) return;
@@ -174,14 +174,16 @@ public class RocketEntity extends Entity {
     protected void readAdditionalSaveData(CompoundTag tag) {
         controllerPos = new BlockPos(tag.getInt("CtrlX"), tag.getInt("CtrlY"), tag.getInt("CtrlZ"));
         setPhase(Phase.values()[tag.getInt("Phase")]);
+        orbitId = tag.contains("OrbitId") ? tag.getInt("OrbitId") : 0;
     }
 
     @Override
     protected void addAdditionalSaveData(CompoundTag tag) {
-        tag.putInt("CtrlX", controllerPos.getX());
-        tag.putInt("CtrlY", controllerPos.getY());
-        tag.putInt("CtrlZ", controllerPos.getZ());
-        tag.putInt("Phase", getPhase().ordinal());
+        tag.putInt("CtrlX",   controllerPos.getX());
+        tag.putInt("CtrlY",   controllerPos.getY());
+        tag.putInt("CtrlZ",   controllerPos.getZ());
+        tag.putInt("Phase",   getPhase().ordinal());
+        tag.putInt("OrbitId", orbitId);
     }
 
     @Override

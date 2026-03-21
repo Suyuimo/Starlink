@@ -7,7 +7,7 @@ import net.minecraftforge.network.simple.SimpleChannel;
 
 public class ModNetwork {
 
-    private static final String PROTOCOL_VERSION = "1";
+    private static final String PROTOCOL_VERSION = "2";
 
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
             new ResourceLocation(Starlink.MODID, "main"),
@@ -33,5 +33,15 @@ public class ModNetwork {
                 SatelliteDataPacket::encode,
                 SatelliteDataPacket::decode,
                 SatelliteDataPacket::handle);
+
+        CHANNEL.registerMessage(id++, SetBlockPrivacyPacket.class,
+                SetBlockPrivacyPacket::encode,
+                SetBlockPrivacyPacket::decode,
+                SetBlockPrivacyPacket::handle);
+
+        CHANNEL.registerMessage(id++, SetSatellitePinPacket.class,
+                SetSatellitePinPacket::encode,
+                SetSatellitePinPacket::decode,
+                SetSatellitePinPacket::handle);
     }
 }
