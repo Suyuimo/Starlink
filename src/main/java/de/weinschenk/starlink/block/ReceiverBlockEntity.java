@@ -2,12 +2,10 @@ package de.weinschenk.starlink.block;
 
 import de.weinschenk.starlink.Config;
 import de.weinschenk.starlink.data.SatelliteRegistry;
-import de.weinschenk.starlink.data.SignalFilterMode;
 import de.weinschenk.starlink.network.ModNetwork;
 import de.weinschenk.starlink.network.StartStreamPacket;
 import de.weinschenk.starlink.network.StopStreamPacket;
 import net.minecraft.core.BlockPos;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
@@ -27,12 +25,7 @@ public class ReceiverBlockEntity extends BlockEntity {
     private static final double LISTENER_RANGE = 32.0;
     private static final double DROPOUT_CHANCE = 0.03;
 
-    // UUIDs der Spieler, die gerade den Stream hören
     private final Set<UUID> activeListeners = new HashSet<>();
-
-    // Privacy-Einstellungen
-    private SignalFilterMode mode        = SignalFilterMode.ALL;
-    private String           requiredPin = "";
 
     public ReceiverBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.RECEIVER.get(), pos, state);
@@ -108,8 +101,6 @@ public class ReceiverBlockEntity extends BlockEntity {
     }
 
     // -------------------------------------------------------------------------
-    // Signal-Checks
-    // -------------------------------------------------------------------------
 
     private boolean checkSignal(ServerLevel level, BlockPos pos) {
         if (!hasClearSky(level, pos)) return false;
@@ -127,47 +118,10 @@ public class ReceiverBlockEntity extends BlockEntity {
 
     private boolean hasSatelliteInRange(ServerLevel level, BlockPos pos) {
         return SatelliteRegistry.get(level.getServer())
-                .countNearFiltered(pos.getX(), pos.getY(), pos.getZ(),
-                        level.getGameTime(), mode, requiredPin) > 0;
+                .countNear(pos.getX(), pos.getY(), pos.getZ(), level.getGameTime()) > 0;
     }
 
     public boolean isReceiving() {
         return getBlockState().getValue(ReceiverBlock.ACTIVE);
-    }
-
-    // -------------------------------------------------------------------------
-    // Getter / Setter
-    // -------------------------------------------------------------------------
-
-    public SignalFilterMode getMode()        { return mode; }
-    public String           getRequiredPin() { return requiredPin; }
-
-    public void setMode(SignalFilterMode m) {
-        this.mode = m;
-        setChanged();
-    }
-
-    public void setRequiredPin(String pin) {
-        this.requiredPin = pin;
-        setChanged();
-    }
-
-    // -------------------------------------------------------------------------
-    // NBT
-    // -------------------------------------------------------------------------
-
-    @Override
-    protected void saveAdditional(CompoundTag tag) {
-        super.saveAdditional(tag);
-        tag.putInt("ReceiverMode", mode.ordinal());
-        tag.putString("RequiredPin", requiredPin);
-    }
-
-    @Override
-    public void load(CompoundTag tag) {
-        super.load(tag);
-        int m = tag.contains("ReceiverMode") ? tag.getInt("ReceiverMode") : 0;
-        mode = SignalFilterMode.values()[Math.max(0, Math.min(m, SignalFilterMode.values().length - 1))];
-        requiredPin = tag.contains("RequiredPin") ? tag.getString("RequiredPin") : "";
     }
 }

@@ -92,17 +92,25 @@ public class RadioStreamPlayer {
             // Puffer initial füllen
             refill(stream, inputBuf);
 
-            // STBVorbis im Push-Modus öffnen
-            try (MemoryStack stack = MemoryStack.stackPush()) {
-                IntBuffer usedBuf  = stack.mallocInt(1);
-                IntBuffer errorBuf = stack.mallocInt(1);
+            // STBVorbis im Push-Modus öffnen.
+            // Code 1 = VORBIS_need_more_data → nachladen und nochmal versuchen.
+            while (true) {
+                try (MemoryStack stack = MemoryStack.stackPush()) {
+                    IntBuffer usedBuf  = stack.mallocInt(1);
+                    IntBuffer errorBuf = stack.mallocInt(1);
 
-                vorbis = STBVorbis.stb_vorbis_open_pushdata(inputBuf, usedBuf, errorBuf, null);
-                if (vorbis == 0) {
-                    LOGGER.error("Starlink: STBVorbis open failed, code={}", errorBuf.get(0));
-                    return;
+                    vorbis = STBVorbis.stb_vorbis_open_pushdata(inputBuf, usedBuf, errorBuf, null);
+                    if (vorbis != 0) {
+                        inputBuf.position(inputBuf.position() + usedBuf.get(0));
+                        break;
+                    }
+                    int code = errorBuf.get(0);
+                    if (code != 1) { // 1 = VORBIS_need_more_data
+                        LOGGER.error("Starlink: STBVorbis open failed, code={}", code);
+                        return;
+                    }
                 }
-                inputBuf.position(inputBuf.position() + usedBuf.get(0));
+                refill(stream, inputBuf);
             }
 
             // Stream-Info lesen

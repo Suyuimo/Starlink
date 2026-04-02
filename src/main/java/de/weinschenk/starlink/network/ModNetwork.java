@@ -34,11 +34,6 @@ public class ModNetwork {
                 SatelliteDataPacket::decode,
                 SatelliteDataPacket::handle);
 
-        CHANNEL.registerMessage(id++, SetBlockPrivacyPacket.class,
-                SetBlockPrivacyPacket::encode,
-                SetBlockPrivacyPacket::decode,
-                SetBlockPrivacyPacket::handle);
-
         CHANNEL.registerMessage(id++, SetSatellitePinPacket.class,
                 SetSatellitePinPacket::encode,
                 SetSatellitePinPacket::decode,

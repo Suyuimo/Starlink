@@ -6,7 +6,6 @@ import de.weinschenk.starlink.client.renderer.SatelliteRenderer;
 import de.weinschenk.starlink.client.screen.DistillationChamberScreen;
 import de.weinschenk.starlink.client.screen.LaunchControllerScreen;
 import de.weinschenk.starlink.client.screen.LaunchControllerV2Screen;
-import de.weinschenk.starlink.client.screen.ReceiverScreen;
 import de.weinschenk.starlink.client.screen.RocketV2Screen;
 import de.weinschenk.starlink.entity.ModEntities;
 import de.weinschenk.starlink.menu.ModMenuTypes;
@@ -36,7 +35,6 @@ public class ClientSetup {
             MenuScreens.register(ModMenuTypes.LAUNCH_CONTROLLER.get(),    LaunchControllerScreen::new);
             MenuScreens.register(ModMenuTypes.ROCKET_V2.get(),            RocketV2Screen::new);
             MenuScreens.register(ModMenuTypes.LAUNCH_CONTROLLER_V2.get(), LaunchControllerV2Screen::new);
-            MenuScreens.register(ModMenuTypes.RECEIVER.get(),             ReceiverScreen::new);
         });
     }
 

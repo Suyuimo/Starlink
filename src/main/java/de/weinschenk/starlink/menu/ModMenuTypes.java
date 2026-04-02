@@ -27,8 +27,4 @@ public class ModMenuTypes {
     public static final RegistryObject<MenuType<LaunchControllerV2Menu>> LAUNCH_CONTROLLER_V2 =
             MENU_TYPES.register("launch_controller_v2",
                     () -> IForgeMenuType.create(LaunchControllerV2Menu::new));
-
-    public static final RegistryObject<MenuType<ReceiverMenu>> RECEIVER =
-            MENU_TYPES.register("receiver",
-                    () -> IForgeMenuType.create(ReceiverMenu::new));
 }
