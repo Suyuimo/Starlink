@@ -31,6 +31,8 @@ public class SatelliteEntity extends Entity {
             SynchedEntityData.defineId(SatelliteEntity.class, EntityDataSerializers.FLOAT);
     private static final EntityDataAccessor<Boolean> DATA_ACTIVE =
             SynchedEntityData.defineId(SatelliteEntity.class, EntityDataSerializers.BOOLEAN);
+    private static final EntityDataAccessor<Byte>    DATA_TYPE =
+            SynchedEntityData.defineId(SatelliteEntity.class, EntityDataSerializers.BYTE);
 
     public static final float MAX_HEALTH = 20.0f;
 
@@ -71,6 +73,7 @@ public class SatelliteEntity extends Entity {
     protected void defineSynchedData() {
         this.entityData.define(DATA_HEALTH, MAX_HEALTH);
         this.entityData.define(DATA_ACTIVE, true);
+        this.entityData.define(DATA_TYPE, (byte) SatelliteType.BASIC.id);
     }
 
     @Override
@@ -166,10 +169,12 @@ public class SatelliteEntity extends Entity {
     // Getter / Setter
     // -------------------------------------------------------------------------
 
-    public float   getHealth()          { return entityData.get(DATA_HEALTH); }
-    public void    setHealth(float h)   { entityData.set(DATA_HEALTH, Math.max(0, Math.min(MAX_HEALTH, h))); }
-    public boolean isActive()           { return entityData.get(DATA_ACTIVE); }
-    public void    setActive(boolean a) { entityData.set(DATA_ACTIVE, a); }
+    public float          getHealth()                    { return entityData.get(DATA_HEALTH); }
+    public void           setHealth(float h)             { entityData.set(DATA_HEALTH, Math.max(0, Math.min(MAX_HEALTH, h))); }
+    public boolean        isActive()                     { return entityData.get(DATA_ACTIVE); }
+    public void           setActive(boolean a)           { entityData.set(DATA_ACTIVE, a); }
+    public SatelliteType  getSatelliteType()             { return SatelliteType.byId(entityData.get(DATA_TYPE)); }
+    public void           setSatelliteType(SatelliteType t) { entityData.set(DATA_TYPE, (byte) t.id); }
 
     // -------------------------------------------------------------------------
     // NBT
@@ -181,6 +186,7 @@ public class SatelliteEntity extends Entity {
         setActive(tag.getBoolean("Active"));
         angle   = tag.getDouble("Angle");
         orbitId = tag.contains("OrbitId") ? tag.getInt("OrbitId") : 0;
+        if (tag.contains("SatType")) setSatelliteType(SatelliteType.byId(tag.getInt("SatType")));
     }
 
     @Override
@@ -189,6 +195,7 @@ public class SatelliteEntity extends Entity {
         tag.putBoolean("Active", isActive());
         tag.putDouble("Angle",   angle);
         tag.putInt("OrbitId",    orbitId);
+        tag.putInt("SatType",    getSatelliteType().id);
     }
 
     @Override public boolean isPickable()    { return true; }

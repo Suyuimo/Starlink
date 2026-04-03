@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:block",
+  "pools": [{
+    "rolls": 1,
+    "entries": [{
+      "type": "minecraft:item",
+      "name": "starlink:energy_receiver_t1"
+    }],
+    "conditions": [{
+      "condition": "minecraft:survives_explosion"
+    }]
+  }]
+}

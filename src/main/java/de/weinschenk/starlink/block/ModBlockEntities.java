@@ -46,4 +46,10 @@ public class ModBlockEntities {
                     () -> BlockEntityType.Builder
                             .of(InfiniteEnergyCellBlockEntity::new, ModBlocks.INFINITE_ENERGY_CELL.get())
                             .build(null));
+
+    public static final RegistryObject<BlockEntityType<SatelliteInterfaceBlockEntity>> SATELLITE_INTERFACE =
+            BLOCK_ENTITIES.register("satellite_interface",
+                    () -> BlockEntityType.Builder
+                            .of(SatelliteInterfaceBlockEntity::new, ModBlocks.SATELLITE_INTERFACE.get())
+                            .build(null));
 }

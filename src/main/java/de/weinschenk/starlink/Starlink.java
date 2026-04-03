@@ -3,6 +3,7 @@ package de.weinschenk.starlink;
 import com.mojang.logging.LogUtils;
 import de.weinschenk.starlink.block.ModBlockEntities;
 import de.weinschenk.starlink.block.ModBlocks;
+import de.weinschenk.starlink.compat.CCPeripheralCompat;
 import de.weinschenk.starlink.block.wireless.ModWirelessBlockEntities;
 import de.weinschenk.starlink.block.wireless.ModWirelessBlocks;
 import de.weinschenk.starlink.dimension.ModDimensions;
@@ -10,6 +11,7 @@ import de.weinschenk.starlink.entity.ModEntities;
 import de.weinschenk.starlink.item.ModItems;
 import de.weinschenk.starlink.menu.ModMenuTypes;
 import de.weinschenk.starlink.network.ModNetwork;
+import de.weinschenk.starlink.recipe.ModRecipeTypes;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.CreativeModeTab;
@@ -17,6 +19,7 @@ import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.BuildCreativeModeTabContentsEvent;
 import net.minecraftforge.eventbus.api.IEventBus;
+import net.minecraftforge.fml.ModList;
 import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.config.ModConfig;
@@ -52,12 +55,17 @@ public class Starlink {
                         output.accept(ModBlocks.RECEIVER.get());
                         output.accept(ModBlocks.LAUNCH_PAD.get());
                         output.accept(ModBlocks.LAUNCH_CONTROLLER.get());
-                        // V2 Rocket System
-                        output.accept(ModItems.SATELLITE.get());
+                        // V2 Rocket System – 5 Satelliten-Varianten
+                        output.accept(ModItems.SATELLITE_BASIC.get());
+                        output.accept(ModItems.SATELLITE_ENERGY.get());
+                        output.accept(ModItems.SATELLITE_FLUID.get());
+                        output.accept(ModItems.SATELLITE_ITEM.get());
+                        output.accept(ModItems.SATELLITE_ADVANCED.get());
                         output.accept(ModBlocks.SATELLITE_WORKBENCH.get());
                         output.accept(ModBlocks.ROCKET_WORKBENCH.get());
                         output.accept(ModBlocks.ROCKET_V2.get());
                         output.accept(ModBlocks.LAUNCH_CONTROLLER_V2.get());
+                        output.accept(ModBlocks.SATELLITE_INTERFACE.get());
                         output.accept(ModBlocks.INFINITE_ENERGY_CELL.get());
                         // Wireless blocks
                         output.accept(ModItems.LINK_TOOL.get());
@@ -84,6 +92,8 @@ public class Starlink {
         ModWirelessBlocks.BLOCKS.register(modEventBus);
         ModWirelessBlocks.ITEMS.register(modEventBus);
         ModWirelessBlockEntities.BLOCK_ENTITIES.register(modEventBus);
+        ModRecipeTypes.RECIPE_TYPES.register(modEventBus);
+        ModRecipeTypes.RECIPE_SERIALIZERS.register(modEventBus);
         CREATIVE_TABS.register(modEventBus);
 
         MinecraftForge.EVENT_BUS.register(this);
@@ -93,6 +103,9 @@ public class Starlink {
 
     private void commonSetup(final FMLCommonSetupEvent event) {
         ModNetwork.register();
+        if (ModList.get().isLoaded("computercraft")) {
+            CCPeripheralCompat.register();
+        }
         LOGGER.info("Starlink mod loaded. Orbit dimension key: {}", ModDimensions.ORBIT_LEVEL_KEY.location());
     }
 }

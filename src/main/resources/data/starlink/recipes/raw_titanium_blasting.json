@@ -1,0 +1,7 @@
+{
+  "type": "minecraft:blasting",
+  "ingredient": { "item": "starlink:raw_titanium" },
+  "result": "starlink:titanium_ingot",
+  "experience": 1.0,
+  "cookingtime": 100
+}

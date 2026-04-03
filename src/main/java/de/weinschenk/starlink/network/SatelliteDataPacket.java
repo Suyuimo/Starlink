@@ -1,6 +1,7 @@
 package de.weinschenk.starlink.network;
 
 import de.weinschenk.starlink.client.tracking.SatelliteTrackingClient;
+import de.weinschenk.starlink.entity.SatelliteType;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.DistExecutor;
@@ -29,8 +30,7 @@ public class SatelliteDataPacket {
             buf.writeDouble(data.z());
             buf.writeDouble(data.angle());
             buf.writeByte(data.orbitId());
-            buf.writeBoolean(data.isPrivate());
-            buf.writeUtf(data.pin(), 64);
+            buf.writeByte(data.satType().id);
         }
     }
 
@@ -38,13 +38,12 @@ public class SatelliteDataPacket {
         int count = buf.readInt();
         List<SatelliteRenderData> list = new ArrayList<>(count);
         for (int i = 0; i < count; i++) {
-            double x        = buf.readDouble();
-            double z        = buf.readDouble();
-            double angle    = buf.readDouble();
-            int    orbitId  = buf.readByte();
-            boolean priv    = buf.readBoolean();
-            String  pin     = buf.readUtf(64);
-            list.add(new SatelliteRenderData(x, z, angle, orbitId, priv, pin));
+            double x       = buf.readDouble();
+            double z       = buf.readDouble();
+            double angle   = buf.readDouble();
+            int    orbitId = buf.readByte();
+            SatelliteType satType = SatelliteType.byId(buf.readByte());
+            list.add(new SatelliteRenderData(x, z, angle, orbitId, satType));
         }
         return new SatelliteDataPacket(list);
     }

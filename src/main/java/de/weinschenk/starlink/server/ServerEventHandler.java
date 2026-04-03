@@ -23,6 +23,7 @@ import net.minecraftforge.server.ServerLifecycleHooks;
 import org.slf4j.Logger;
 import com.mojang.logging.LogUtils;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -34,6 +35,8 @@ public class ServerEventHandler {
     private static final Logger LOGGER = LogUtils.getLogger();
 
     private static final int GLASSES_UPDATE_INTERVAL = 20;
+    /** Wie oft (in Ticks) auf abgelaufene Satelliten geprüft wird: alle 5 Minuten. */
+    private static final int EXPIRY_CHECK_INTERVAL = 5 * 60 * 20;
 
     /** Radius around an orbit-dimension player within which satellite entities are spawned.
      *  Must stay within server simulation distance (~160 blocks = 10 chunks) so that
@@ -58,6 +61,11 @@ public class ServerEventHandler {
 
         if (gameTime % 20 == 0) {
             updateOrbitEntities(server, gameTime);
+        }
+
+        // Abgelaufene Satelliten entfernen
+        if (gameTime % EXPIRY_CHECK_INTERVAL == 0) {
+            checkExpiredSatellites(server, gameTime);
         }
 
         // Brillen-Daten senden
@@ -87,6 +95,34 @@ public class ServerEventHandler {
     }
 
     // -------------------------------------------------------------------------
+
+    private static void checkExpiredSatellites(MinecraftServer server, long gameTime) {
+        SatelliteRegistry registry = SatelliteRegistry.get(server);
+
+        // Collect expired UUIDs before removal so we can discard their entities
+        List<UUID> expiredIds = new ArrayList<>();
+        for (Map.Entry<UUID, SatelliteRegistry.SatEntry> e : registry.getEntries().entrySet()) {
+            if (e.getValue().isExpired(gameTime)) expiredIds.add(e.getKey());
+        }
+        if (expiredIds.isEmpty()) return;
+
+        int removed = registry.removeExpired(gameTime);
+
+        // Discard live entities for expired satellites
+        for (UUID id : expiredIds) {
+            SatelliteEntity entity = managedEntities.remove(id);
+            if (entity != null && !entity.isRemoved()) entity.discard();
+        }
+
+        // Notify all online players
+        String msg = removed == 1
+                ? "\u00a76[Starlink] \u00a7c1 Satellit abgestürzt!"
+                : "\u00a76[Starlink] \u00a7c" + removed + " Satelliten abgestürzt!";
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+            player.sendSystemMessage(net.minecraft.network.chat.Component.literal(msg));
+        }
+        LOGGER.info("[Starlink] {} satellite(s) expired and removed from registry.", removed);
+    }
 
     private static void updateOrbitEntities(MinecraftServer server, long gameTime) {
         ServerLevel orbitLevel = server.getLevel(ModDimensions.ORBIT_LEVEL_KEY);

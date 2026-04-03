@@ -4,6 +4,7 @@ import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import de.weinschenk.starlink.Starlink;
 import de.weinschenk.starlink.block.LaunchControllerBlockEntity;
+import de.weinschenk.starlink.block.LaunchControllerV2BlockEntity;
 import de.weinschenk.starlink.data.SatelliteRegistry;
 import de.weinschenk.starlink.dimension.ModDimensions;
 import de.weinschenk.starlink.entity.ModEntities;
@@ -23,6 +24,8 @@ import net.minecraftforge.fml.common.Mod;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 @Mod.EventBusSubscriber(modid = Starlink.MODID, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public class ModCommands {
@@ -41,6 +44,17 @@ public class ModCommands {
                     .then(Commands.literal("killall")
                         .requires(src -> src.hasPermission(2))
                         .executes(ctx -> killAllSatellites(ctx.getSource())))
+                    .then(Commands.literal("kill")
+                        .requires(src -> src.hasPermission(2))
+                        .then(Commands.literal("orbit")
+                            .then(Commands.argument("orbitId", IntegerArgumentType.integer(0, 63))
+                                .executes(ctx -> killOrbit(ctx.getSource(),
+                                        IntegerArgumentType.getInteger(ctx, "orbitId")))
+                                .then(Commands.literal("nearest")
+                                    .executes(ctx -> killNearestInOrbit(ctx.getSource(),
+                                            IntegerArgumentType.getInteger(ctx, "orbitId"))))))
+                        .then(Commands.literal("nearest")
+                            .executes(ctx -> killNearest(ctx.getSource()))))
                     .then(Commands.literal("spawn")
                         .requires(src -> src.hasPermission(2))
                         .then(Commands.argument("count", IntegerArgumentType.integer(1, 2000))
@@ -198,6 +212,110 @@ public class ModCommands {
         return finalSpawned;
     }
 
+    /** Entfernt alle Satelliten eines bestimmten Orbits. */
+    private static int killOrbit(CommandSourceStack source, int orbitId) {
+        ServerLevel orbitLevel = source.getServer().getLevel(ModDimensions.ORBIT_LEVEL_KEY);
+        if (orbitLevel == null) {
+            source.sendFailure(Component.literal("Orbit-Dimension nicht gefunden!"));
+            return 0;
+        }
+
+        SatelliteRegistry registry = SatelliteRegistry.get(source.getServer());
+        // Betroffene UUIDs vor dem Löschen merken, um Entities zu discarden
+        List<UUID> toKill = new ArrayList<>(registry.getEntries().entrySet().stream()
+                .filter(e -> e.getValue().orbitId() == orbitId)
+                .map(Map.Entry::getKey)
+                .toList());
+
+        int removed = registry.unregisterOrbit(orbitId);
+
+        // Geladene Entities discarden
+        for (Entity entity : orbitLevel.getAllEntities()) {
+            if (entity instanceof SatelliteEntity sat && toKill.contains(sat.getUUID())) {
+                sat.setActive(false);
+                sat.discard();
+            }
+        }
+
+        source.sendSuccess(() -> Component.literal(
+                "§6[Starlink] §a" + removed + " Satellit(en) in Orbit §e" + orbitId + " §aentfernt."
+        ), true);
+        return removed;
+    }
+
+    /** Entfernt den nächsten Satelliten in einem bestimmten Orbit. */
+    private static int killNearestInOrbit(CommandSourceStack source, int orbitId) {
+        ServerLevel orbitLevel = source.getServer().getLevel(ModDimensions.ORBIT_LEVEL_KEY);
+        if (orbitLevel == null) {
+            source.sendFailure(Component.literal("Orbit-Dimension nicht gefunden!"));
+            return 0;
+        }
+
+        SatelliteRegistry registry = SatelliteRegistry.get(source.getServer());
+        Vec3 pos = source.getPosition();
+        long tick = source.getServer().overworld().getGameTime();
+        var nearest = registry.getNearestInOrbit(orbitId, pos.x, pos.z, tick);
+
+        if (nearest.isEmpty()) {
+            source.sendFailure(Component.literal("Kein Satellit in Orbit " + orbitId + " gefunden."));
+            return 0;
+        }
+
+        UUID uuid = nearest.get();
+        registry.unregister(uuid);
+
+        for (Entity entity : orbitLevel.getAllEntities()) {
+            if (entity instanceof SatelliteEntity sat && sat.getUUID().equals(uuid)) {
+                sat.setActive(false);
+                sat.discard();
+            }
+        }
+
+        source.sendSuccess(() -> Component.literal(
+                "§6[Starlink] §aSatellit §7(" + uuid.toString().substring(0, 8) + "...) §ain Orbit §e" + orbitId + " §aentfernt."
+        ), true);
+        return 1;
+    }
+
+    /** Entfernt den Satelliten, der dem Spieler (auf der X/Z-Ebene) am nächsten ist. */
+    private static int killNearest(CommandSourceStack source) {
+        ServerLevel orbitLevel = source.getServer().getLevel(ModDimensions.ORBIT_LEVEL_KEY);
+        if (orbitLevel == null) {
+            source.sendFailure(Component.literal("Orbit-Dimension nicht gefunden!"));
+            return 0;
+        }
+
+        SatelliteRegistry registry = SatelliteRegistry.get(source.getServer());
+        if (registry.total() == 0) {
+            source.sendFailure(Component.literal("Keine Satelliten im Orbit."));
+            return 0;
+        }
+
+        Vec3 pos = source.getPosition();
+        long tick = source.getServer().overworld().getGameTime();
+        var nearest = registry.getNearestTo(pos.x, pos.z, tick);
+
+        if (nearest.isEmpty()) {
+            source.sendFailure(Component.literal("Kein Satellit gefunden."));
+            return 0;
+        }
+
+        UUID uuid = nearest.get();
+        registry.unregister(uuid);
+
+        for (Entity entity : orbitLevel.getAllEntities()) {
+            if (entity instanceof SatelliteEntity sat && sat.getUUID().equals(uuid)) {
+                sat.setActive(false);
+                sat.discard();
+            }
+        }
+
+        source.sendSuccess(() -> Component.literal(
+                "§6[Starlink] §aSatellit §7(" + uuid.toString().substring(0, 8) + "...) §aentfernt."
+        ), true);
+        return 1;
+    }
+
     /**
      * Killt alle Satelliten — auch in ungeladenen Chunks.
      */
@@ -243,6 +361,12 @@ public class ModCommands {
     private static int resetControllers(CommandSourceStack source) {
         int count = 0;
         for (LaunchControllerBlockEntity ctrl : new ArrayList<>(LaunchControllerBlockEntity.ALL_LOADED)) {
+            if (ctrl.isLaunching()) {
+                ctrl.onRocketDeparted();
+                count++;
+            }
+        }
+        for (LaunchControllerV2BlockEntity ctrl : new ArrayList<>(LaunchControllerV2BlockEntity.ALL_LOADED)) {
             if (ctrl.isLaunching()) {
                 ctrl.onRocketDeparted();
                 count++;

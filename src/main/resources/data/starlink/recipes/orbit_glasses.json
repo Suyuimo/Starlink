@@ -1,0 +1,14 @@
+{
+  "type": "starlink:satellite_crafting",
+  "pattern": [
+    "PCP",
+    "GTG"
+  ],
+  "key": {
+    "P": { "item": "minecraft:glass_pane" },
+    "C": { "item": "starlink:circuit_board" },
+    "G": { "item": "minecraft:gold_ingot" },
+    "T": { "item": "starlink:titanium_ingot" }
+  },
+  "result": { "item": "starlink:orbit_glasses", "count": 1 }
+}

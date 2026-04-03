@@ -1,0 +1,15 @@
+{
+  "type": "starlink:satellite_crafting",
+  "pattern": [
+    "DPD",
+    "TCT",
+    "DPD"
+  ],
+  "key": {
+    "D": { "item": "minecraft:diamond" },
+    "P": { "item": "starlink:solar_panel" },
+    "T": { "item": "starlink:titanium_ingot" },
+    "C": { "item": "starlink:circuit_board" }
+  },
+  "result": { "item": "starlink:satellite_advanced", "count": 1 }
+}

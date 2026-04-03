@@ -1,0 +1,14 @@
+{
+  "type": "starlink:satellite_crafting",
+  "pattern": [
+    "SCS",
+    "CTC",
+    "SCS"
+  ],
+  "key": {
+    "S": { "item": "starlink:steel_ingot" },
+    "C": { "item": "minecraft:copper_ingot" },
+    "T": { "item": "starlink:titanium_ingot" }
+  },
+  "result": { "item": "starlink:satellite_fluid", "count": 1 }
+}

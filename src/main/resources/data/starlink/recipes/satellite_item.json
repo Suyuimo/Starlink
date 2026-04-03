@@ -1,0 +1,14 @@
+{
+  "type": "starlink:satellite_crafting",
+  "pattern": [
+    "SHS",
+    "HCH",
+    "SHS"
+  ],
+  "key": {
+    "S": { "item": "starlink:steel_ingot" },
+    "H": { "item": "minecraft:hopper" },
+    "C": { "item": "starlink:circuit_board" }
+  },
+  "result": { "item": "starlink:satellite_item", "count": 1 }
+}

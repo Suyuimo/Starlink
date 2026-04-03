@@ -8,6 +8,8 @@ import de.weinschenk.starlink.dimension.ModDimensions;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
@@ -118,18 +120,12 @@ public class RocketV2Entity extends Entity {
 
         SatelliteRegistry registry = SatelliteRegistry.get(((ServerLevel) level()).getServer());
 
-        // Configs können leer sein (z.B. nach NBT-Reload ohne Privacy-Daten)
         int total = satelliteConfigs.isEmpty() ? legacySatelliteCount : satelliteConfigs.size();
         int spawned = 0;
 
         for (int i = 0; i < total; i++) {
-            boolean isPrivate = false;
-            String  pin       = "";
-            if (!satelliteConfigs.isEmpty()) {
-                RocketV2BlockEntity.SatelliteConfig cfg = satelliteConfigs.get(i);
-                isPrivate = cfg.isPrivate();
-                pin       = cfg.pin();
-            }
+            SatelliteType satType = !satelliteConfigs.isEmpty()
+                    ? satelliteConfigs.get(i).satType() : SatelliteType.BASIC;
 
             double angle  = baseAngle + i * angularSpacing;
             double spawnX = r * Math.cos(angle);
@@ -139,9 +135,10 @@ public class RocketV2Entity extends Entity {
             if (satellite != null) {
                 satellite.setAngle(angle);
                 satellite.setOrbitId(orbitId);
+                satellite.setSatelliteType(satType);
                 satellite.setPos(spawnX, SatelliteEntity.ORBIT_HEIGHT, spawnZ);
                 orbitLevel.addFreshEntity(satellite);
-                registry.register(satellite.getUUID(), orbitId, angle, startTick, isPrivate, pin);
+                registry.register(satellite.getUUID(), orbitId, angle, startTick, satType);
                 satellite.setVelocityFactor(registry.getOrbitVelocityFactor(orbitId));
                 spawned++;
             }
@@ -211,12 +208,20 @@ public class RocketV2Entity extends Entity {
     @Override
     protected void readAdditionalSaveData(CompoundTag tag) {
         controllerPos = new BlockPos(tag.getInt("CtrlX"), tag.getInt("CtrlY"), tag.getInt("CtrlZ"));
-        legacySatelliteCount = tag.getInt("SatCount");
         orbitId = tag.contains("OrbitId") ? tag.getInt("OrbitId") : 0;
         setPhase(Phase.values()[tag.getInt("Phase")]);
         if (tag.hasUUID("PlayerUUID")) launchingPlayerUuid = tag.getUUID("PlayerUUID");
-        // Privacy-Konfigurationen werden nicht persistiert (rocket is in flight, no need)
+
         satelliteConfigs = new ArrayList<>();
+        if (tag.contains("SatConfigs", Tag.TAG_LIST)) {
+            ListTag list = tag.getList("SatConfigs", Tag.TAG_COMPOUND);
+            for (int i = 0; i < list.size(); i++) {
+                CompoundTag entry = list.getCompound(i);
+                SatelliteType satType = SatelliteType.byId(entry.getInt("SatType"));
+                satelliteConfigs.add(new RocketV2BlockEntity.SatelliteConfig(satType));
+            }
+        }
+        legacySatelliteCount = satelliteConfigs.isEmpty() ? tag.getInt("SatCount") : satelliteConfigs.size();
     }
 
     @Override
@@ -224,10 +229,19 @@ public class RocketV2Entity extends Entity {
         tag.putInt("CtrlX",    controllerPos.getX());
         tag.putInt("CtrlY",    controllerPos.getY());
         tag.putInt("CtrlZ",    controllerPos.getZ());
-        tag.putInt("SatCount", satelliteConfigs.isEmpty() ? legacySatelliteCount : satelliteConfigs.size());
         tag.putInt("OrbitId",  orbitId);
         tag.putInt("Phase",    getPhase().ordinal());
         if (launchingPlayerUuid != null) tag.putUUID("PlayerUUID", launchingPlayerUuid);
+
+        ListTag list = new ListTag();
+        for (RocketV2BlockEntity.SatelliteConfig cfg : satelliteConfigs) {
+            CompoundTag entry = new CompoundTag();
+            entry.putInt("SatType", cfg.satType().id);
+            list.add(entry);
+        }
+        tag.put("SatConfigs", list);
+        // Legacy-Feld für Abwärtskompatibilität
+        tag.putInt("SatCount", satelliteConfigs.size());
     }
 
     @Override public boolean isPickable() { return false; }

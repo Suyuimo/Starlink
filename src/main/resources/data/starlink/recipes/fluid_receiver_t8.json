@@ -1,0 +1,10 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": ["MMM", "MCM", " A "],
+  "key": {
+    "A": { "item": "minecraft:nautilus_shell" },
+    "M": { "item": "minecraft:netherite_ingot" },
+    "C": { "item": "starlink:circuit_board" }
+  },
+  "result": { "item": "starlink:fluid_receiver_t8", "count": 1 }
+}

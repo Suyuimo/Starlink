@@ -5,6 +5,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
@@ -21,8 +22,18 @@ public abstract class TieredWirelessBlockEntity extends BlockEntity {
 
     private static final double SATELLITE_RANGE = 100.0;
 
-    protected int cachedSatCount = 0;
+    protected int cachedSatCount    = 0;  // total (unweighted) – used for radio signal
+    protected int cachedEnergySats  = 0;  // weighted for RF energy transfer
+    protected int cachedFluidSats   = 0;  // weighted for fluid transfer
+    protected int cachedItemSats    = 0;  // weighted for item transfer
     private long lastSatRefreshTick = -1L;
+
+    /** Kanalname: leer = öffentlich, nicht-leer = privat (nur gleicher Kanal darf verbinden/übertragen) */
+    private String channel = "";
+
+    public String getChannel() { return channel; }
+    public void setChannel(String ch) { this.channel = ch == null ? "" : ch; setChanged(); }
+    public boolean isPrivate() { return !channel.isEmpty(); }
 
     // ---- Optional RF energy storage (Item/Fluid types only) -----------------
 
@@ -68,9 +79,13 @@ public abstract class TieredWirelessBlockEntity extends BlockEntity {
         return energyStore == null ? 0 : energyStore.getMaxEnergyStored();
     }
 
-    public int getCachedSatCount() {
-        return cachedSatCount;
-    }
+    public int getCachedSatCount()   { return cachedSatCount; }
+    public int getEnergySatCount()   { return cachedEnergySats; }
+    public int getFluidSatCount()    { return cachedFluidSats; }
+    public int getItemSatCount()     { return cachedItemSats; }
+
+    /** Override in each subclass to open the block's GUI for this player. */
+    public void openGui(ServerPlayer player) { }
 
     public int getTier() {
         if (getBlockState().getBlock() instanceof TieredWirelessBlock twb) {
@@ -86,8 +101,14 @@ public abstract class TieredWirelessBlockEntity extends BlockEntity {
 
         if (!(level instanceof ServerLevel serverLevel)) return;
 
-        cachedSatCount = SatelliteRegistry.get(serverLevel.getServer())
-                .countNear(pos.getX(), pos.getY(), pos.getZ(), serverLevel.getGameTime());
+        SatelliteRegistry reg = SatelliteRegistry.get(serverLevel.getServer());
+        double x = pos.getX(), y = pos.getY(), z = pos.getZ();
+        long tick = serverLevel.getGameTime();
+
+        cachedSatCount   = reg.countNear(x, y, z, tick);
+        cachedEnergySats = reg.countNearEnergy(x, y, z, tick);
+        cachedFluidSats  = reg.countNearFluid(x, y, z, tick);
+        cachedItemSats   = reg.countNearItem(x, y, z, tick);
     }
 
     @Override
@@ -106,6 +127,7 @@ public abstract class TieredWirelessBlockEntity extends BlockEntity {
     protected void saveAdditional(CompoundTag tag) {
         super.saveAdditional(tag);
         tag.putInt("SatCache", cachedSatCount);
+        tag.putString("Channel", channel);
         if (energyStore != null) tag.putInt("RFEnergy", energyStore.getEnergyStored());
     }
 
@@ -113,6 +135,7 @@ public abstract class TieredWirelessBlockEntity extends BlockEntity {
     public void load(CompoundTag tag) {
         super.load(tag);
         cachedSatCount = tag.getInt("SatCache");
+        channel = tag.contains("Channel") ? tag.getString("Channel") : "";
         if (energyStore != null && tag.contains("RFEnergy")) energyStore.setDirect(tag.getInt("RFEnergy"));
     }
 }

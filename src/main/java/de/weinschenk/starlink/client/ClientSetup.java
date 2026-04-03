@@ -6,7 +6,13 @@ import de.weinschenk.starlink.client.renderer.SatelliteRenderer;
 import de.weinschenk.starlink.client.screen.DistillationChamberScreen;
 import de.weinschenk.starlink.client.screen.LaunchControllerScreen;
 import de.weinschenk.starlink.client.screen.LaunchControllerV2Screen;
+import de.weinschenk.starlink.client.screen.ReceiverScreen;
 import de.weinschenk.starlink.client.screen.RocketV2Screen;
+import de.weinschenk.starlink.client.screen.SatelliteWorkbenchScreen;
+import de.weinschenk.starlink.client.screen.RocketWorkbenchScreen;
+import de.weinschenk.starlink.client.screen.WirelessEnergyScreen;
+import de.weinschenk.starlink.client.screen.WirelessFluidScreen;
+import de.weinschenk.starlink.client.screen.WirelessItemScreen;
 import de.weinschenk.starlink.entity.ModEntities;
 import de.weinschenk.starlink.menu.ModMenuTypes;
 import net.minecraft.client.gui.screens.MenuScreens;
@@ -35,6 +41,15 @@ public class ClientSetup {
             MenuScreens.register(ModMenuTypes.LAUNCH_CONTROLLER.get(),    LaunchControllerScreen::new);
             MenuScreens.register(ModMenuTypes.ROCKET_V2.get(),            RocketV2Screen::new);
             MenuScreens.register(ModMenuTypes.LAUNCH_CONTROLLER_V2.get(), LaunchControllerV2Screen::new);
+            MenuScreens.register(ModMenuTypes.SATELLITE_WORKBENCH.get(),       SatelliteWorkbenchScreen::new);
+            MenuScreens.register(ModMenuTypes.ROCKET_WORKBENCH.get(),          RocketWorkbenchScreen::new);
+            MenuScreens.register(ModMenuTypes.ENERGY_TRANSMITTER_MENU.get(),   WirelessEnergyScreen::new);
+            MenuScreens.register(ModMenuTypes.ENERGY_RECEIVER_MENU.get(),      WirelessEnergyScreen::new);
+            MenuScreens.register(ModMenuTypes.ITEM_TRANSMITTER_MENU.get(),     WirelessItemScreen::new);
+            MenuScreens.register(ModMenuTypes.ITEM_RECEIVER_MENU.get(),        WirelessItemScreen::new);
+            MenuScreens.register(ModMenuTypes.FLUID_TRANSMITTER_MENU.get(),    WirelessFluidScreen::new);
+            MenuScreens.register(ModMenuTypes.FLUID_RECEIVER_MENU.get(),       WirelessFluidScreen::new);
+            MenuScreens.register(ModMenuTypes.RECEIVER_MENU.get(),             ReceiverScreen::new);
         });
     }
 
@@ -42,5 +57,6 @@ public class ClientSetup {
     public static void onRegisterLayerDefinitions(EntityRenderersEvent.RegisterLayerDefinitions event) {
         event.registerLayerDefinition(SatelliteRenderer.LAYER_LOCATION, SatelliteRenderer::createBodyLayer);
         event.registerLayerDefinition(RocketRenderer.LAYER_LOCATION, RocketRenderer::createBodyLayer);
+        event.registerLayerDefinition(RocketV2Renderer.LAYER_LOCATION, RocketV2Renderer::createBodyLayer);
     }
 }

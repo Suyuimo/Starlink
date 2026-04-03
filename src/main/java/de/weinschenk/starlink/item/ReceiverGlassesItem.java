@@ -24,18 +24,13 @@ public class ReceiverGlassesItem extends Item implements Equipable {
 
     /**
      * Normaler Rechtsklick: Brille anlegen.
-     * Schleichen + Rechtsklick: Filter-Modus wechseln (Alle → Öffentlich → Privat → Alle …).
+     * Schleichen + Rechtsklick: Aktuelle Signalstärke anzeigen (Anzahl Satelliten im 20°-Kegel).
      */
     @Override
     public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
         if (player.isShiftKeyDown()) {
-            if (!level.isClientSide) {
-                GlassesFilterMode next = GlassesFilterMode.get(stack).next();
-                GlassesFilterMode.set(stack, next);
-                player.displayClientMessage(
-                        Component.literal("§6[Starlink] §fFilter: §b" + next.displayName()), true);
-            }
+            // Signalstatus wird client-seitig aus den gecachten Daten berechnet
             return InteractionResultHolder.success(stack);
         }
         return this.swapWithEquipmentSlot(this, level, player, hand);

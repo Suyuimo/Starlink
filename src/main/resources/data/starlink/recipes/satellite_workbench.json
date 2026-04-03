@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "CCC",
+    "SWS",
+    "SSS"
+  ],
+  "key": {
+    "C": { "item": "starlink:circuit_board" },
+    "S": { "item": "starlink:steel_ingot" },
+    "W": { "item": "minecraft:crafting_table" }
+  },
+  "result": { "item": "starlink:satellite_workbench", "count": 1 }
+}

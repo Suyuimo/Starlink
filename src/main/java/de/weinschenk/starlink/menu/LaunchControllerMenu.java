@@ -7,6 +7,7 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerData;
+import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -84,7 +85,13 @@ public class LaunchControllerMenu extends AbstractContainerMenu {
     public ItemStack quickMoveStack(Player player, int index) { return ItemStack.EMPTY; }
 
     @Override
-    public boolean stillValid(Player player) { return true; }
+    public boolean stillValid(Player player) {
+        if (blockEntity == null || blockEntity.getLevel() == null) return false;
+        return stillValid(
+                ContainerLevelAccess.create(blockEntity.getLevel(), blockEntity.getBlockPos()),
+                player,
+                blockEntity.getBlockState().getBlock());
+    }
 
     // ── Spieler-Inventar-Slots (nur damit das Inventar im GUI sichtbar ist) ──
 

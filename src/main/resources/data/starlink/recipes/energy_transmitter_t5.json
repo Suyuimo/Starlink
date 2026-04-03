@@ -1,0 +1,10 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [" A ", "MCM", "MMM"],
+  "key": {
+    "A": { "item": "minecraft:glowstone_dust" },
+    "M": { "item": "starlink:titanium_ingot" },
+    "C": { "item": "starlink:circuit_board" }
+  },
+  "result": { "item": "starlink:energy_transmitter_t5", "count": 1 }
+}

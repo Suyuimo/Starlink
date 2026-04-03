@@ -1,0 +1,14 @@
+{
+  "type": "starlink:satellite_crafting",
+  "pattern": [
+    "GRG",
+    "RCR",
+    "GRG"
+  ],
+  "key": {
+    "G": { "item": "minecraft:gold_ingot" },
+    "R": { "item": "minecraft:redstone" },
+    "C": { "item": "minecraft:copper_ingot" }
+  },
+  "result": { "item": "starlink:circuit_board", "count": 1 }
+}

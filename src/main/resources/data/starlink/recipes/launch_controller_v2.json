@@ -1,0 +1,14 @@
+{
+  "type": "starlink:rocket_crafting",
+  "pattern": [
+    "TCT",
+    "CLC",
+    "TCT"
+  ],
+  "key": {
+    "T": { "item": "starlink:titanium_ingot" },
+    "C": { "item": "starlink:circuit_board" },
+    "L": { "item": "starlink:launch_controller" }
+  },
+  "result": { "item": "starlink:launch_controller_v2", "count": 1 }
+}

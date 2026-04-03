@@ -1,6 +1,8 @@
 package de.weinschenk.starlink.block;
 
+import de.weinschenk.starlink.entity.SatelliteType;
 import de.weinschenk.starlink.item.SatelliteItem;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
@@ -62,7 +64,7 @@ public class RocketV2BlockEntity extends BlockEntity {
     }
 
     /**
-     * Leert das Inventar und gibt pro Satellit seine Privacy-Konfiguration zurück.
+     * Leert das Inventar und gibt pro Satellit seine Typ-Konfiguration zurück.
      * Wird von RocketV2Entity.deployToOrbit() verwendet.
      */
     public List<SatelliteConfig> consumeAllSatellitesWithConfig() {
@@ -70,9 +72,9 @@ public class RocketV2BlockEntity extends BlockEntity {
         for (int i = 0; i < SATELLITE_SLOTS; i++) {
             ItemStack stack = inventory.getStackInSlot(i);
             if (!stack.isEmpty()) {
-                configs.add(new SatelliteConfig(
-                        SatelliteItem.isPrivate(stack),
-                        SatelliteItem.getPin(stack)));
+                SatelliteType type = stack.getItem() instanceof SatelliteItem si
+                        ? si.getSatelliteType() : SatelliteType.BASIC;
+                configs.add(new SatelliteConfig(type));
                 inventory.setStackInSlot(i, ItemStack.EMPTY);
             }
         }
@@ -80,7 +82,7 @@ public class RocketV2BlockEntity extends BlockEntity {
         return configs;
     }
 
-    public record SatelliteConfig(boolean isPrivate, String pin) {}
+    public record SatelliteConfig(SatelliteType satType) {}
 
     public ItemStackHandler getInventory() {
         return inventory;

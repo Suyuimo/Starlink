@@ -99,9 +99,20 @@ public class OrbitOverlayRenderer {
         ItemStack headStack = player.getItemBySlot(EquipmentSlot.HEAD);
         GlassesFilterMode filterMode = GlassesFilterMode.get(headStack);
         List<SatelliteRenderData> satellites = applyFilter(SatelliteTrackingClient.getSatellites(), filterMode);
-        if (satellites.isEmpty()) return;
 
         Vec3 cam = mc.gameRenderer.getMainCamera().getPosition();
+
+        // ReceiverGlasses: only render satellites within the 20° signal cone
+        if (isReceiverGlasses) {
+            double playerAngle = Math.atan2(cam.z, cam.x);
+            satellites = satellites.stream().filter(sat -> {
+                double da = sat.angle() - playerAngle;
+                da -= 2 * Math.PI * Math.floor((da + Math.PI) / (2 * Math.PI));
+                return Math.abs(da) <= CONE_HALF_ANGLE;
+            }).toList();
+        }
+
+        if (satellites.isEmpty()) return;
         float cx = (float) cam.x, cy = (float) cam.y, cz = (float) cam.z;
         long gameTime = mc.level != null ? mc.level.getGameTime() : 0L;
 
@@ -117,8 +128,8 @@ public class OrbitOverlayRenderer {
         Set<Integer> activeOrbits = new LinkedHashSet<>();
         for (SatelliteRenderData sat : satellites) activeOrbits.add(sat.orbitId() % ORBIT_COLORS.length);
 
-        // Orbit rings
-        for (int oid : activeOrbits) {
+        // Orbit rings – not shown for ReceiverGlasses (cone-only view, no context rings needed)
+        if (!isReceiverGlasses) for (int oid : activeOrbits) {
             OrbitDisplayParams p = orbitDisplayParams(oid, gameTime);
             int[] oc = ORBIT_COLORS[oid];
             for (int i = 0; i < RING_SEGMENTS; i++) {
@@ -369,14 +380,10 @@ public class OrbitOverlayRenderer {
     // Helpers
     // =========================================================================
 
-    /** Filtert die Satelliten-Liste nach dem Glas-Filter-Modus. */
+    /** Alle Satelliten sind geteiltes Medium — kein Privacy-Filter. */
     private static List<SatelliteRenderData> applyFilter(List<SatelliteRenderData> all,
                                                           GlassesFilterMode mode) {
-        return switch (mode) {
-            case ALL          -> all;
-            case PUBLIC_ONLY  -> all.stream().filter(s -> !s.isPrivate()).toList();
-            case PRIVATE_ONLY -> all.stream().filter(SatelliteRenderData::isPrivate).toList();
-        };
+        return all;
     }
 
     private static void thickLine(BufferBuilder buf, Matrix4f mat,

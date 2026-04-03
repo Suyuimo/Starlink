@@ -1,6 +1,8 @@
 {
   "values": [
     "starlink:petroleum_shale_ore",
+    "starlink:titanium_ore",
+    "starlink:deepslate_titanium_ore",
     "starlink:launch_pad",
     "starlink:launch_controller",
     "starlink:receiver",

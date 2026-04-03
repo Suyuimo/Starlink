@@ -1,0 +1,14 @@
+{
+  "type": "starlink:rocket_crafting",
+  "pattern": [
+    "TTT",
+    "SBS",
+    "SSS"
+  ],
+  "key": {
+    "T": { "item": "starlink:titanium_ingot" },
+    "S": { "item": "starlink:steel_ingot" },
+    "B": { "item": "minecraft:blast_furnace" }
+  },
+  "result": { "item": "starlink:rocket_workbench", "count": 1 }
+}

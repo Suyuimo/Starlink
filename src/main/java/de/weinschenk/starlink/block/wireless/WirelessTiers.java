@@ -35,15 +35,18 @@ public final class WirelessTiers {
     }
 
     /**
-     * Returns energy bandwidth (RF/t) for the given tier (1-8) and satellite count.
+     * Returns energy bandwidth (RF/t) for the given tier (1-8) and satellite counts.
+     * @param effectiveSatCount  weighted count (boosted by satellite type) – used for normal BW
+     * @param rawSatCount        physical satellite count – used for the T8 infinite threshold
+     * Tier 8 infinite bandwidth requires exactly 20 physical satellites regardless of type.
      */
-    public static long energyBandwidth(int tier, int satCount) {
-        if (satCount <= 0) return 0L;
+    public static long energyBandwidth(int tier, int effectiveSatCount, int rawSatCount) {
+        if (effectiveSatCount <= 0) return 0L;
         int idx = Math.min(tier, 8) - 1;
-        if (tier == 8 && satCount >= T8_SAT_REQUIRED) {
+        if (tier == 8 && rawSatCount >= T8_SAT_REQUIRED) {
             return Long.MAX_VALUE / 2;
         }
-        return ENERGY_PER_SAT[idx] * (long) satCount;
+        return ENERGY_PER_SAT[idx] * (long) effectiveSatCount;
     }
 
     /**

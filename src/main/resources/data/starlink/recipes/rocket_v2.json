@@ -1,0 +1,14 @@
+{
+  "type": "starlink:rocket_crafting",
+  "pattern": [
+    "TFT",
+    "TST",
+    "TFT"
+  ],
+  "key": {
+    "T": { "item": "starlink:titanium_ingot" },
+    "F": { "item": "starlink:rocket_fuel" },
+    "S": { "item": "starlink:steel_ingot" }
+  },
+  "result": { "item": "starlink:rocket_v2", "count": 1 }
+}

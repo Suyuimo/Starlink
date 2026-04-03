@@ -1,0 +1,14 @@
+{
+  "type": "starlink:satellite_crafting",
+  "pattern": [
+    " R",
+    "CR",
+    " S"
+  ],
+  "key": {
+    "R": { "item": "minecraft:redstone" },
+    "C": { "item": "starlink:circuit_board" },
+    "S": { "item": "starlink:steel_ingot" }
+  },
+  "result": { "item": "starlink:link_tool", "count": 1 }
+}

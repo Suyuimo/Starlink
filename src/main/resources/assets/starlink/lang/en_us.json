@@ -62,9 +62,22 @@
   "block.starlink.fluid_receiver_t8": "Fluid Receiver T8",
   "entity.starlink.rocket_v2": "Rocket V2",
   "item.starlink.satellite": "Satellite",
+  "item.starlink.satellite_basic": "Satellite (Basic)",
+  "item.starlink.satellite_energy": "Satellite (Energy)",
+  "item.starlink.satellite_fluid": "Satellite (Fluid)",
+  "item.starlink.satellite_item": "Satellite (Item)",
+  "item.starlink.satellite_advanced": "Satellite (Advanced)",
   "block.starlink.satellite_workbench": "Satellite Workbench",
   "block.starlink.rocket_workbench": "Rocket Workbench",
   "block.starlink.rocket_v2": "Rocket V2",
   "block.starlink.launch_controller_v2": "Launch Controller V2",
-  "block.starlink.infinite_energy_cell": "Infinite Energy Cell §7[Debug]"
+  "block.starlink.infinite_energy_cell": "Infinite Energy Cell §7[Debug]",
+  "block.starlink.titanium_ore": "Titanium Ore",
+  "block.starlink.deepslate_titanium_ore": "Deepslate Titanium Ore",
+  "item.starlink.raw_titanium": "Raw Titanium",
+  "item.starlink.titanium_ingot": "Titanium Ingot",
+  "item.starlink.steel_ingot": "Steel Ingot",
+  "item.starlink.circuit_board": "Circuit Board",
+  "item.starlink.solar_panel": "Solar Panel",
+  "block.starlink.satellite_interface": "Satellite Interface"
 }

@@ -2,16 +2,22 @@ package de.weinschenk.starlink.block;
 
 import de.weinschenk.starlink.Config;
 import de.weinschenk.starlink.data.SatelliteRegistry;
+import de.weinschenk.starlink.menu.ModMenuTypes;
+import de.weinschenk.starlink.menu.ReceiverMenu;
 import de.weinschenk.starlink.network.ModNetwork;
 import de.weinschenk.starlink.network.StartStreamPacket;
 import de.weinschenk.starlink.network.StopStreamPacket;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.SimpleMenuProvider;
+import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
+import net.minecraftforge.network.NetworkHooks;
 import net.minecraftforge.network.PacketDistributor;
 
 import java.util.HashSet;
@@ -26,6 +32,7 @@ public class ReceiverBlockEntity extends BlockEntity {
     private static final double DROPOUT_CHANCE = 0.03;
 
     private final Set<UUID> activeListeners = new HashSet<>();
+    private int cachedSatCount = 0;
 
     public ReceiverBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.RECEIVER.get(), pos, state);
@@ -34,6 +41,9 @@ public class ReceiverBlockEntity extends BlockEntity {
     public static void tick(Level level, BlockPos pos, BlockState state, ReceiverBlockEntity be) {
         if (level.getGameTime() % CHECK_INTERVAL_TICKS != 0) return;
 
+        be.cachedSatCount = SatelliteRegistry.get(((ServerLevel) level).getServer())
+                .countNear(pos.getX(), pos.getY(), pos.getZ(), level.getGameTime());
+
         boolean signalActive = be.checkSignal((ServerLevel) level, pos);
 
         if (signalActive != state.getValue(ReceiverBlock.ACTIVE)) {
@@ -41,6 +51,27 @@ public class ReceiverBlockEntity extends BlockEntity {
         }
 
         be.updateListeners((ServerLevel) level, pos, signalActive);
+    }
+
+    public int getCachedSatCount() { return cachedSatCount; }
+
+    public void openGui(ServerPlayer player) {
+        ReceiverBlockEntity self = this;
+        NetworkHooks.openScreen(player, new SimpleMenuProvider(
+            (id, inv, p) -> new ReceiverMenu(id, inv,
+                new ContainerData() {
+                    @Override public int get(int i) {
+                        return switch (i) {
+                            case 0 -> self.getBlockState().getValue(ReceiverBlock.ACTIVE) ? 1 : 0;
+                            case 1 -> self.cachedSatCount;
+                            default -> 0;
+                        };
+                    }
+                    @Override public void set(int i, int v) {}
+                    @Override public int getCount() { return ReceiverMenu.DATA_COUNT; }
+                }),
+            Component.translatable("block.starlink.receiver")),
+        buf -> {});
     }
 
     private void updateListeners(ServerLevel level, BlockPos pos, boolean signalActive) {
@@ -100,11 +131,9 @@ public class ReceiverBlockEntity extends BlockEntity {
         }
     }
 
-    // -------------------------------------------------------------------------
-
     private boolean checkSignal(ServerLevel level, BlockPos pos) {
         if (!hasClearSky(level, pos)) return false;
-        if (!hasSatelliteInRange(level, pos)) return false;
+        if (cachedSatCount <= 0) return false;
         if (Math.random() < DROPOUT_CHANCE) return false;
         return true;
     }
@@ -114,11 +143,6 @@ public class ReceiverBlockEntity extends BlockEntity {
             if (!level.getBlockState(pos.above(i)).isAir()) return false;
         }
         return true;
-    }
-
-    private boolean hasSatelliteInRange(ServerLevel level, BlockPos pos) {
-        return SatelliteRegistry.get(level.getServer())
-                .countNear(pos.getX(), pos.getY(), pos.getZ(), level.getGameTime()) > 0;
     }
 
     public boolean isReceiving() {

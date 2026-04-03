@@ -1,14 +1,14 @@
 {
-  "type": "minecraft:crafting_shaped",
+  "type": "starlink:rocket_crafting",
   "pattern": [
-    "ISI",
+    "SIS",
     "ICI",
-    "III"
+    "SIS"
   ],
   "key": {
+    "S": { "item": "starlink:steel_ingot" },
     "I": { "item": "minecraft:iron_ingot" },
-    "S": { "item": "minecraft:smooth_stone" },
-    "C": { "item": "minecraft:cauldron" }
+    "C": { "item": "minecraft:copper_block" }
   },
   "result": { "item": "starlink:distillation_chamber", "count": 1 }
 }

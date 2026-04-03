@@ -1,0 +1,15 @@
+{
+  "type": "starlink:satellite_crafting",
+  "pattern": [
+    "PPP",
+    "GCG",
+    "SSS"
+  ],
+  "key": {
+    "P": { "item": "minecraft:glass_pane" },
+    "G": { "item": "minecraft:gold_ingot" },
+    "C": { "item": "starlink:circuit_board" },
+    "S": { "item": "starlink:steel_ingot" }
+  },
+  "result": { "item": "starlink:solar_panel", "count": 1 }
+}

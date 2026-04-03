@@ -1,0 +1,14 @@
+{
+  "type": "starlink:satellite_crafting",
+  "pattern": [
+    "PCP",
+    "GRG"
+  ],
+  "key": {
+    "P": { "item": "minecraft:glass_pane" },
+    "C": { "item": "starlink:circuit_board" },
+    "G": { "item": "minecraft:gold_ingot" },
+    "R": { "item": "minecraft:redstone" }
+  },
+  "result": { "item": "starlink:receiver_glasses", "count": 1 }
+}

@@ -1,13 +1,15 @@
 {
-  "type": "minecraft:crafting_shaped",
+  "type": "starlink:rocket_crafting",
   "pattern": [
-    " A ",
-    "AIA",
-    "III"
+    "TRT",
+    "RCR",
+    "SSS"
   ],
   "key": {
-    "A": { "item": "minecraft:iron_ingot" },
-    "I": { "item": "minecraft:iron_block" }
+    "T": { "item": "starlink:titanium_ingot" },
+    "R": { "item": "minecraft:redstone" },
+    "C": { "item": "starlink:circuit_board" },
+    "S": { "item": "starlink:steel_ingot" }
   },
   "result": { "item": "starlink:receiver", "count": 1 }
 }

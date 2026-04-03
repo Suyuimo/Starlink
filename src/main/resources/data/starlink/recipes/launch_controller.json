@@ -1,14 +1,14 @@
 {
-  "type": "minecraft:crafting_shaped",
+  "type": "starlink:rocket_crafting",
   "pattern": [
-    "RPR",
-    "RCR",
-    "RRR"
+    "CRC",
+    "RLR",
+    "CRC"
   ],
   "key": {
+    "C": { "item": "starlink:circuit_board" },
     "R": { "item": "minecraft:redstone" },
-    "P": { "item": "minecraft:comparator" },
-    "C": { "item": "starlink:launch_pad" }
+    "L": { "item": "starlink:launch_pad" }
   },
   "result": { "item": "starlink:launch_controller", "count": 1 }
 }

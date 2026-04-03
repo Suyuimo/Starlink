@@ -1,0 +1,10 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [" A ", "MCM", "MMM"],
+  "key": {
+    "A": { "item": "minecraft:redstone" },
+    "M": { "item": "minecraft:iron_ingot" },
+    "C": { "item": "starlink:circuit_board" }
+  },
+  "result": { "item": "starlink:energy_transmitter_t1", "count": 1 }
+}

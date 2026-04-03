@@ -1,0 +1,10 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [" A ", "MCM", "MMM"],
+  "key": {
+    "A": { "item": "minecraft:nautilus_shell" },
+    "M": { "item": "minecraft:emerald" },
+    "C": { "item": "starlink:circuit_board" }
+  },
+  "result": { "item": "starlink:fluid_transmitter_t7", "count": 1 }
+}

@@ -1,0 +1,15 @@
+{
+  "type": "starlink:satellite_crafting",
+  "pattern": [
+    "SPS",
+    "TCT",
+    "SPS"
+  ],
+  "key": {
+    "S": { "item": "starlink:steel_ingot" },
+    "P": { "item": "starlink:solar_panel" },
+    "T": { "item": "starlink:titanium_ingot" },
+    "C": { "item": "starlink:circuit_board" }
+  },
+  "result": { "item": "starlink:satellite_basic", "count": 1 }
+}

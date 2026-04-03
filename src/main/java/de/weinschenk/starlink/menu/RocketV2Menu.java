@@ -2,7 +2,6 @@ package de.weinschenk.starlink.menu;
 
 import de.weinschenk.starlink.block.ModBlockEntities;
 import de.weinschenk.starlink.block.RocketV2BlockEntity;
-import de.weinschenk.starlink.item.SatelliteItem;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
@@ -53,37 +52,6 @@ public class RocketV2Menu extends AbstractContainerMenu {
     public RocketV2Menu(int containerId, Inventory playerInventory, FriendlyByteBuf buf) {
         this(containerId, playerInventory,
                 (RocketV2BlockEntity) playerInventory.player.level().getBlockEntity(buf.readBlockPos()));
-    }
-
-    // -------------------------------------------------------------------------
-    // Per-Slot Privacy-Toggle (Client sendet handleInventoryButtonClick → Server ruft hier auf)
-    // -------------------------------------------------------------------------
-
-    @Override
-    public boolean clickMenuButton(Player player, int id) {
-        if (id < 0 || id >= RocketV2BlockEntity.SATELLITE_SLOTS) return false;
-
-        ItemStack stack = blockEntity.getInventory().getStackInSlot(id);
-        if (stack.isEmpty() || !(stack.getItem() instanceof SatelliteItem)) return false;
-
-        boolean nowPrivate = !SatelliteItem.isPrivate(stack);
-        ItemStack updated = stack.copy();
-        SatelliteItem.setPrivate(updated, nowPrivate);
-        if (!nowPrivate) SatelliteItem.setPin(updated, ""); // PIN löschen wenn wieder öffentlich
-        blockEntity.getInventory().setStackInSlot(id, updated);
-        return true;
-    }
-
-    // -------------------------------------------------------------------------
-    // Zugriff für SetSatellitePinPacket
-    // -------------------------------------------------------------------------
-
-    public ItemStack getSlotItem(int slotIndex) {
-        return blockEntity.getInventory().getStackInSlot(slotIndex);
-    }
-
-    public void setSlotItem(int slotIndex, ItemStack stack) {
-        blockEntity.getInventory().setStackInSlot(slotIndex, stack);
     }
 
     // -------------------------------------------------------------------------

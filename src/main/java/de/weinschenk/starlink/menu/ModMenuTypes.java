@@ -27,4 +27,40 @@ public class ModMenuTypes {
     public static final RegistryObject<MenuType<LaunchControllerV2Menu>> LAUNCH_CONTROLLER_V2 =
             MENU_TYPES.register("launch_controller_v2",
                     () -> IForgeMenuType.create(LaunchControllerV2Menu::new));
+
+    public static final RegistryObject<MenuType<SatelliteWorkbenchMenu>> SATELLITE_WORKBENCH =
+            MENU_TYPES.register("satellite_workbench",
+                    () -> IForgeMenuType.create((id, inv, data) -> new SatelliteWorkbenchMenu(id, inv)));
+
+    public static final RegistryObject<MenuType<RocketWorkbenchMenu>> ROCKET_WORKBENCH =
+            MENU_TYPES.register("rocket_workbench",
+                    () -> IForgeMenuType.create((id, inv, data) -> new RocketWorkbenchMenu(id, inv)));
+
+    public static final RegistryObject<MenuType<WirelessEnergyMenu>> ENERGY_TRANSMITTER_MENU =
+            MENU_TYPES.register("energy_transmitter",
+                    () -> IForgeMenuType.create(WirelessEnergyMenu::forTransmitter));
+
+    public static final RegistryObject<MenuType<WirelessEnergyMenu>> ENERGY_RECEIVER_MENU =
+            MENU_TYPES.register("energy_receiver",
+                    () -> IForgeMenuType.create(WirelessEnergyMenu::forReceiver));
+
+    public static final RegistryObject<MenuType<WirelessItemMenu>> ITEM_TRANSMITTER_MENU =
+            MENU_TYPES.register("item_transmitter",
+                    () -> IForgeMenuType.create(WirelessItemMenu::forTransmitter));
+
+    public static final RegistryObject<MenuType<WirelessItemMenu>> ITEM_RECEIVER_MENU =
+            MENU_TYPES.register("item_receiver",
+                    () -> IForgeMenuType.create(WirelessItemMenu::forReceiver));
+
+    public static final RegistryObject<MenuType<WirelessFluidMenu>> FLUID_TRANSMITTER_MENU =
+            MENU_TYPES.register("fluid_transmitter",
+                    () -> IForgeMenuType.create(WirelessFluidMenu::forTransmitter));
+
+    public static final RegistryObject<MenuType<WirelessFluidMenu>> FLUID_RECEIVER_MENU =
+            MENU_TYPES.register("fluid_receiver",
+                    () -> IForgeMenuType.create(WirelessFluidMenu::forReceiver));
+
+    public static final RegistryObject<MenuType<ReceiverMenu>> RECEIVER_MENU =
+            MENU_TYPES.register("receiver",
+                    () -> IForgeMenuType.create(ReceiverMenu::new));
 }

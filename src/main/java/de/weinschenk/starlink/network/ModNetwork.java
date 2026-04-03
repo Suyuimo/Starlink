@@ -34,9 +34,9 @@ public class ModNetwork {
                 SatelliteDataPacket::decode,
                 SatelliteDataPacket::handle);
 
-        CHANNEL.registerMessage(id++, SetSatellitePinPacket.class,
-                SetSatellitePinPacket::encode,
-                SetSatellitePinPacket::decode,
-                SetSatellitePinPacket::handle);
+        CHANNEL.registerMessage(id++, SetWirelessChannelPacket.class,
+                SetWirelessChannelPacket::encode,
+                SetWirelessChannelPacket::decode,
+                SetWirelessChannelPacket::handle);
     }
 }

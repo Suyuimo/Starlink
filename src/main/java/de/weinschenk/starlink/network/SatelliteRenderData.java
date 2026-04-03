@@ -1,10 +1,10 @@
 package de.weinschenk.starlink.network;
 
+import de.weinschenk.starlink.entity.SatelliteType;
+
 /**
- * Leichtgewichtige Satelliten-Daten für die Client-seitige Darstellung.
- * angle    = aktueller Winkel in Radiant
- * isPrivate= ob der Satellit privat ist
- * pin      = zugehöriger PIN (leer bei öffentlichen Satelliten)
+ * Lightweight satellite data for client-side rendering.
+ * Satellites are a shared medium — no privacy filtering at satellite level.
  */
 public record SatelliteRenderData(double x, double z, double angle, int orbitId,
-                                   boolean isPrivate, String pin) {}
+                                   SatelliteType satType) {}
